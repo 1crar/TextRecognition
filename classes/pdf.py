@@ -37,6 +37,5 @@ if pdf.is_contains_data_table():
         print(table, type(table), sep='\n')
 
     extract_table(pdf_path, page_num=0, table_num=0)
-
 else:
     print("Таблица не найдена.")

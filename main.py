@@ -18,6 +18,7 @@ if __name__ == '__main__':
     # Извлекаем номер артикула из текста (который был извлечен из пдф)
     data_extraction = PatternDataExtraction(txt=extracted_text)
     our_data = data_extraction.extract_article_number()
+    our_data = data_extraction.extract_quantity()
     print(our_data)
 
 

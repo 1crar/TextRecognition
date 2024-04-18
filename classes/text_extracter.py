@@ -93,12 +93,14 @@ Dr.-Ing.Sergej Bagh Konto-Nr. 168041, BLZ 36020030
 Sitz der Gesellschaft: Berg
 Handelsregister Ulm Nr. ARB 552598
 '''
+
+# pattern = r'(\d+,\d+)'
+# result = re.search(pattern, text, re.DOTALL)
 #
-# pattern = r"(Z\d{6})"
-#
-# result = re.search(pattern, text)
 # if result:
 #     print(result.group())
+# else:
+#     print("Match not found")
 
 
 class PatternDataExtraction:
@@ -112,3 +114,8 @@ class PatternDataExtraction:
         self.extracted_data['article_number'] = result.group()
         return self.extracted_data
 
+    def extract_quantity(self) -> dict:
+        quantity_pattern = r'(\d+,\d+)'
+        result = re.search(quantity_pattern, self.txt, re.DOTALL)
+        self.extracted_data['quantity'] = result.group()
+        return self.extracted_data
