@@ -11,6 +11,8 @@ path_to_tesseract: str = os.getenv('TESSERACT_PATH_DIR')
 tesseract_exe: str = os.getenv('EXECUTION_FILE')
 
 if __name__ == '__main__':
+    print(f'{path_to_tesseract}\\{tesseract_exe}')
+
     # Извлекаем текст из пдф-файла
     image_1 = Img(path_dir=path_to_tesseract, exe_file=tesseract_exe)
     extracted_text = image_1.get_text(image=r'extract_assets/BL24-10003-1.png')
