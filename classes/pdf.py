@@ -23,19 +23,39 @@ class PDF:
                     return isinstance(element, LTRect)
 
 
-pdf = PDF(path_dir='../extract_assets', pdf_file='BL24-10003.pdf')
-
+# Создаем экземпляр класса
+pdf = PDF(path_dir='../extract_assets', pdf_file='BL24-union.pdf')
+# Извлечение данных табличной части
 if pdf.is_contains_data_table():
-    pdf_path = '../extract_assets/BL24-10003.pdf'
+    pdf_path = '../extract_assets/BL24-union.pdf'
 
-    def extract_table(pdf_path, page_num, table_num):
+
+    def extract_tables(pdf_path: str) -> list:
         pdf = pdfplumber.open(pdf_path)
-        # Найти исследуемую страницу
-        table_page = pdf.pages[page_num]
-        # Извлечение соответствующей таблицы
-        table = table_page.extract_tables()[table_num]
-        print(table, type(table), sep='\n')
+        extracted_table: list = []
 
-    extract_table(pdf_path, page_num=0, table_num=0)
+        for page_num in range(len(pdf.pages)):
+            table_page = pdf.pages[page_num]
+            tables = table_page.extract_tables()
+
+            for table in enumerate(tables):
+                # print(f"Table on page {page_num+1}")
+                # print(table)
+                extracted_table.append(table)
+
+        return extracted_table
+
+    pdf_table = extract_tables(pdf_path)
+
+    dt = []             # список двумерных массивов (двумерных списков)
+    for el in pdf_table:
+        if type(el) == list:
+            dt.append(el)
+
+    for i in range(len(pdf_table)):
+        dt.append(pdf_table[i][1])
+
+    print(pdf_table[0][1], dt, sep='\n')
 else:
     print("Таблица не найдена.")
+

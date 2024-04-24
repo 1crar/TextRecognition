@@ -115,7 +115,7 @@ class PatternDataExtraction:
         return self.extracted_data
 
     def extract_quantity(self) -> dict:
-        quantity_pattern = r'(\d+,\d+)'
+        quantity_pattern = r'(\d+,\d+)'     # Регулярка для извлечения кол-ва (menge)
         result = re.search(quantity_pattern, self.txt, re.DOTALL)
         self.extracted_data['quantity'] = result.group()
         return self.extracted_data
