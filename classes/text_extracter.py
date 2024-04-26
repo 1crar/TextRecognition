@@ -110,12 +110,22 @@ class PatternDataExtraction:
 
     def extract_article_number(self) -> dict:
         article_pattern = r"(Z\d{6})"       # Регулярка для извлечение номера артикула
-        result = re.search(article_pattern, self.txt)
-        self.extracted_data['article_number'] = result.group(0)
+        result = re.finditer(article_pattern, self.txt)
+        articles = []
+
+        for article in result:
+            articles.append(article.group(0))
+
+        self.extracted_data['article_number'] = articles
         return self.extracted_data
 
     def extract_quantity(self) -> dict:
-        quantity_pattern = r'(\d+,\d+)'     # Регулярка для извлечения кол-ва (menge)
-        result = re.search(quantity_pattern, self.txt, re.DOTALL)
-        self.extracted_data['quantity'] = result.group(0)
+        quantity_pattern = r'\d{1,9},\d{2,3} KW'    # Регулярка для извлечения кол-ва (menge)
+        result = re.finditer(quantity_pattern, self.txt, re.DOTALL)
+        quantity_values = []
+
+        for quantity in result:
+            quantity_values.append(quantity.group(0))
+
+        self.extracted_data['quantity'] = quantity_values
         return self.extracted_data

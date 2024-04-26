@@ -50,13 +50,17 @@ if __name__ == '__main__':
         text += el
 
     data_extraction = PatternDataExtraction(txt=text)
-    article = data_extraction.extract_article_number()
-    quantity = data_extraction.extract_quantity()
-    # print(article, quantity, sep='\n')
+    articles = data_extraction.extract_article_number()
+    quantities = data_extraction.extract_quantity()
+    print(articles, quantities, sep='\n')
 
-    articles = re.finditer(r"(Z\d{6})", text)
-    for article in articles:
-        print(article.group(0))
+    for el in articles['article_number']:
+        print(el)
+
+
+    # articles = re.finditer(r"(Z\d{6})", text)
+    # for article in articles:
+    #     print(article.group(0))
 
     # Извлекаем текст из пдф-файла
     # image_1 = Img(path_dir=path_to_tesseract, exe_file=tesseract_exe)
