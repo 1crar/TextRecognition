@@ -52,10 +52,8 @@ if __name__ == '__main__':
     data_extraction = PatternDataExtraction(txt=text)
     articles = data_extraction.extract_article_number()
     quantities = data_extraction.extract_quantity()
-    print(articles, quantities, sep='\n')
-
-    for el in articles['article_number']:
-        print(el)
+    terms = data_extraction.extract_term_delivery()
+    print(articles, quantities, terms, sep='\n')
 
 
     # articles = re.finditer(r"(Z\d{6})", text)

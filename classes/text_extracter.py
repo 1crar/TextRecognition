@@ -125,7 +125,18 @@ class PatternDataExtraction:
         quantity_values = []
 
         for quantity in result:
-            quantity_values.append(quantity.group(0))
+            quantity_values.append(quantity.group(0)[:2])
 
         self.extracted_data['quantity'] = quantity_values
+        return self.extracted_data
+
+    def extract_term_delivery(self) -> dict:
+        term_delivery_pattern = r'KW\s+(\d+)'
+        result = re.finditer(term_delivery_pattern, self.txt, re.DOTALL)
+        term_delivery_values = []
+
+        for term in result:
+            term_delivery_values.append(term.group(0)[3:])
+
+        self.extracted_data['term_delivery'] = term_delivery_values
         return self.extracted_data
