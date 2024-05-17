@@ -1,142 +1,49 @@
 import re
 
-text = '''
-hps SystemTechnik GmbH - Altdorfer StraBe 16 - 88276 Berg
-
-SPRINTIS Schenk GmbH & Co. KG_ONLINE
-Bestell-Team
-
-Ludwig-Weis-StraRe 11
-
-97082 Wurzburg
-
-Bestellung an Lieferant BL24-10003
-Rechnung bitte 2-fach
-
-Zahlungsbedingung: paypal
-
-Sehr geehrtes Bestell-Team,
-
-SystemTechnik
-
-ite)
-
-Competence in Training
-
-Sachbearbeiter: Team Einkauf
-
-Telefon: (0751) 56075-10
-
-Telefax:
-
-E-mail: einkauf@hps-systemtechnik.com
-
-Unsere Kundennr.: 80117
-Lieferant: 80117/80117
-
-Ihre Tel.-Nr.: (0931) 40416222
-Ihre Fax Nr.:
-
-Datum: 11.4.2024
-
-wir bestellen zu den Allgemeinen Lieferbedingungen flr Leistungen und Erzeugnisse der Elektroindustrie (Stand
-2
-
-Jan. 2002).
-
-Pos. Artikel Nr.
-
-1. 1 Rolle
-GZ.RL.10.02.90.593
-
-Artikel-Bezeichnung
-
-Z002878
-
-Gummiband schwarz 10 mm breit
-Gummilitze 10 mm 12 fdg.
-Polyester - Elasthodien
-Artikelnummer: 49018/10
-
-Farbe: 7010/schwarz
-
-VE: 200m pro Spule
-
-hps SystemTechnik
-Lehr- + Lernmittel GmbH
-Altdorfer Strake 16
-88276 Berg
-
-USt-IdNr.: DE119820017
-
-Tel.: (0751) 56075-0
-
-Fax: (0751) 56075-77
-E-Mail:support@hps-systemtechnik.com
-Web: www.hps-systemtechnik.com
-
-Menge/ _Liefer- E-Preis € Rabatt G-Preis
-Einheit Termin
-90,00 KW 17 0,23 20,7
-m
-
-Warenwert € 20,70
-
-Steuer 19% € 3,93
-
-Gesamtsumme € 24,63
-
-Seite - 1 -
-Geschaftsfuhrer: National-Bank Milheim AG, Essen
-
-Dr.-Ing.Sergej Bagh Konto-Nr. 168041, BLZ 36020030
-Sitz der Gesellschaft: Berg
-Handelsregister Ulm Nr. ARB 552598
-'''
-
-# pattern = r'(\d+,\d+)'
-# result = re.search(pattern, text, re.DOTALL)
-#
-# if result:
-#     print(result.group())
-# else:
-#     print("Match not found")
-
 
 class PatternDataExtraction:
     def __init__(self, txt: str):
-        self.txt = txt
-        self.extracted_data = {}
+        self.txt: str = txt
 
-    def extract_article_number(self) -> dict:
-        article_pattern = r"(Z\d{6})"       # Регулярка для извлечение номера артикула
+        self.article_numbers: list = []
+        self.quantity_numbers: list = []
+        self.term_delivery_numbers: list = []
+
+        self.data_collection: dict = {}
+
+    def extract_article_number(self) -> list:
+        article_pattern = r"(Z\d{6})"       # Регулярка для извлечения номера артикула
         result = re.finditer(article_pattern, self.txt)
-        articles = []
 
         for article in result:
-            articles.append(article.group(0))
+            self.article_numbers.append(article.group(0))
 
-        self.extracted_data['article_number'] = articles
-        return self.extracted_data
+        # self.extracted_data['article_number'] = articles
+        return self.article_numbers
 
-    def extract_quantity(self) -> dict:
+    def extract_quantity(self) -> list:
         quantity_pattern = r'\d{1,9},\d{2,3} KW'    # Регулярка для извлечения кол-ва (menge)
         result = re.finditer(quantity_pattern, self.txt, re.DOTALL)
-        quantity_values = []
 
         for quantity in result:
-            quantity_values.append(quantity.group(0)[:2])
+            self.quantity_numbers.append(quantity.group(0)[:2])
 
-        self.extracted_data['quantity'] = quantity_values
-        return self.extracted_data
+        # self.extracted_data['quantity'] = quantity_values
+        return self.quantity_numbers
 
-    def extract_term_delivery(self) -> dict:
-        term_delivery_pattern = r'KW\s+(\d+)'
+    def extract_term_delivery(self) -> list:
+        term_delivery_pattern = r'KW\s+(\d+)'      # Регулярка для извлечения Liefer-Termin
         result = re.finditer(term_delivery_pattern, self.txt, re.DOTALL)
-        term_delivery_values = []
 
         for term in result:
-            term_delivery_values.append(term.group(0)[3:])
+            self.term_delivery_numbers.append(term.group(0)[3:])
 
-        self.extracted_data['term_delivery'] = term_delivery_values
-        return self.extracted_data
+        # self.extracted_data['term_delivery'] = term_delivery_values
+        return self.term_delivery_numbers
+
+    def data_collect(self, articles: list, quantities: list, terms_delivery: list) -> dict:
+        self.data_collection['article_number'] = articles
+        self.data_collection['quantity'] = quantities
+        self.data_collection['term_delivery'] = terms_delivery
+
+        return self.data_collection

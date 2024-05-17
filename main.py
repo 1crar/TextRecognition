@@ -13,27 +13,31 @@ tesseract_exe: str = os.getenv('EXECUTION_FILE')
 if __name__ == '__main__':
     # print(f'{path_to_tesseract}\\{tesseract_exe}')
 
+    # Создаем экземпляр класса и присваиваем конкретный pdf-документ, который будем парсить
     pdf_example = PDF(path_dir='extract_assets', pdf_file='BL24-union.pdf')
-
+    # Условие срабатывает, если в pdf-документе есть табличная часть
     if pdf_example.is_contains_data_table():
-
+        # Функция возвращает данные в виде списка, извлеченные из табличной части
         pdf_table = extract_tables(path_to_pdf=pdf_example.full_path)
+        # print(f'данные в pdf_table\n{pdf_table}')
 
-        dt = []  # список двумерных массивов (двумерных списков)
+        # Далее работаем со списком pdf_table, так как он очень громоздкий (в этом списке кортеж,
+        # в котором также содержится список (внутри этого списка, списки самих данных))
+
+        dt = []  # Список двумерных массивов (двумерных списков). По сути, сама табличная часть (таблица из pdf-файла)
+
         for el in pdf_table:
+            # Конкретно извлекаем список
             if type(el) == list:
                 dt.append(el)
-
+        # Из списка извлекаем списки с табличными данными
         for i in range(len(pdf_table)):
             dt.append(pdf_table[i][1])
 
         # print(dt, len(dt), dt[0][0], sep='\n')
 
-        # for i in range(len(dt)):
-        #     for j in range(len(dt[i])):
-        #         print(dt[i][j])
-
-        # Записываем извлеченный данные из таблицы в текстовый файл
+        # Записываем извлеченный данные из таблицы (dt) в текстовый файл
+        # Запись текст я реализовал для удобства просмотра результата извлеченных данных.
         with open(file='data.txt', encoding='utf-8', mode='w') as data_file:
             for i in range(len(dt)):
                 for j in range(len(dt[i])):
@@ -43,18 +47,24 @@ if __name__ == '__main__':
     with open(file='data.txt', encoding='utf-8', mode='r') as data_file:
         data = data_file.readlines()
 
-    text = ''
+    # Создаем var text для записи данных в виде текста
+    text: str = ''
     for el in data:
         text += el
 
+    # Затем создаем экземпляр класса data_extraction
     data_extraction = PatternDataExtraction(txt=text)
 
-    articles = data_extraction.extract_article_number()
-    quantities = data_extraction.extract_quantity()
-    terms = data_extraction.extract_term_delivery()
-
-    print(articles, quantities, terms, sep='\n')
-
+    # Создаем список articles и добавляем туда извлеченный данные с помощью метода extract_article_number()
+    articles: list = data_extraction.extract_article_number()
+    # Создаем список quantities и добавляем туда извлеченный данные с помощью метода extract_quantity()
+    quantities: list = data_extraction.extract_quantity()
+    # В созданный ранее словарь добавляем Liefer-Termin
+    terms: list = data_extraction.extract_term_delivery()
+    # Создаем словарь и добавляем в него списки articles, quantities и terms
+    data_collection: dict = data_extraction.data_collect(articles=articles, quantities=quantities,
+                                                         terms_delivery=terms)
+    print(articles, quantities, terms, data_collection, sep='\n')
 
     # articles = re.finditer(r"(Z\d{6})", text)
     # for article in articles:
