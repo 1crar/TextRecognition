@@ -1,8 +1,6 @@
 import os
-import re
 
 from dotenv import load_dotenv
-from classes.img import Img
 from classes.text_extracter import PatternDataExtraction
 from classes.pdf import PDF, extract_tables
 
@@ -50,9 +48,11 @@ if __name__ == '__main__':
         text += el
 
     data_extraction = PatternDataExtraction(txt=text)
+
     articles = data_extraction.extract_article_number()
     quantities = data_extraction.extract_quantity()
     terms = data_extraction.extract_term_delivery()
+
     print(articles, quantities, terms, sep='\n')
 
 
