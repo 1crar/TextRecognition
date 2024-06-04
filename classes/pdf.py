@@ -22,6 +22,7 @@ class PDF:
                 # Проверка элементов на наличие таблиц
                 if isinstance(element, LTRect):
                     return isinstance(element, LTRect)
+                return False
 
 
 # Функция для извлечения данных из таблицы pdf. Возвращает список данных
