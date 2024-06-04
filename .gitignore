@@ -9,3 +9,6 @@ __pycache__/
 
 # assets
 extract_assets/
+
+# results
+extracted_results/
