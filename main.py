@@ -1,9 +1,7 @@
 import os
-import pytesseract
 
 from dotenv import load_dotenv
-from classes.text_extracter import PatternDataExtraction
-from classes.pdf import PDF, extract_tables
+from classes.pdf import PdfAnalyzer, extract_tables
 from classes.img import ImageDataTableExtracter, tesseract_languages
 
 # Загружаем переменные из файла .env
@@ -13,7 +11,7 @@ path_to_tesseract: str = os.getenv('TESSERACT_PATH_DIR')
 tesseract_exe: str = os.getenv('EXECUTION_FILE')
 
 # Позволяет выбрать из какого формата будем извлекать (если True, то из картинки. False - из пдф)
-IS_IMAGE: bool = True
+IS_IMAGE: bool = False
 
 if __name__ == '__main__':
     # List of available languages
@@ -29,7 +27,8 @@ if __name__ == '__main__':
             print(result, file=f)
     else:
         # Создаем экземпляр класса и присваиваем конкретный pdf-документ, который будем парсить
-        pdf_example = PDF(path_dir='extract_assets', pdf_file='pdf_1.pdf')
+        pdf_example = PdfAnalyzer(path_dir='extract_assets', pdf_file='pdf_1.pdf')
+        print(pdf_example.full_path)
         # Условие срабатывает, если в pdf-документе есть табличная часть
         if pdf_example.is_contains_data_table():
             # Функция возвращает данные в виде списка, извлеченные из табличной части
