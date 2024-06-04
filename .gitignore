@@ -6,3 +6,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+# assets
+extract_assets/

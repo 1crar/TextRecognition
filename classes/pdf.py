@@ -1,4 +1,6 @@
 import PyPDF2       # Для чтения PDF
+# from tabula import read_pdf
+
 from pdfminer.high_level import extract_pages, extract_text     # Для анализа PDF-макета и извлечения текста
 from pdfminer.layout import LTTextContainer, LTChar, LTRect, LTFigure   # Для анализа PDF-макета и извлечения текста
 import pdfplumber       # Для извлечения текста из таблиц в PDF
