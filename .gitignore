@@ -12,3 +12,8 @@ extract_assets/
 
 # results
 extracted_results/
+
+# test .py file
+test.py
+
+data.txt
