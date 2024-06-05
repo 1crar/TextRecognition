@@ -11,13 +11,13 @@ path_to_tesseract: str = os.getenv('TESSERACT_PATH_DIR')
 tesseract_exe: str = os.getenv('EXECUTION_FILE')
 
 # Позволяет выбрать из какого формата будем извлекать (если True, то из картинки. False - из пдф)
-IS_IMAGE: bool = False
+IS_IMAGE: bool = True
 
 if __name__ == '__main__':
     # List of available languages
     # print(tesseract_languages(path_to_tesseract=f'{path_to_tesseract}/{tesseract_exe}'))
     if IS_IMAGE:
-        image_1 = ImageDataTableExtracter(path_dir='extract_assets', image_file='img_1.png',
+        image_1 = ImageDataTableExtracter(path_dir='extract_assets/input_files', image_file='img_3.png',
                                           path_to_tesseract=f'{path_to_tesseract}/{tesseract_exe}')
         result = image_1.extract_data_from_image()
         print(result)
