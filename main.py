@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 from classes.pdf import PdfAnalyzer, extract_tables
 from classes.img import ImageDataTableExtracter, tesseract_languages
 
-from tabula import read_pdf
-
 # Загружаем переменные из файла .env
 load_dotenv()
 
@@ -31,12 +29,6 @@ if __name__ == '__main__':
         # Создаем экземпляр класса и присваиваем конкретный pdf-документ, который будем парсить
         pdf_example = PdfAnalyzer(path_dir='extract_assets', pdf_file='pdf_1.pdf')
         print(pdf_example.full_path)
-
-        myfile = 'extract_assets/pdf_1.pdf'
-        # using the read_pdf() function
-        mytable = read_pdf(myfile, pages=1)
-        # printing the table
-        print(mytable)
 
         # Условие срабатывает, если в pdf-документе есть табличная часть
         if pdf_example.is_contains_data_table():
