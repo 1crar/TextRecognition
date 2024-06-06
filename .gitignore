@@ -12,3 +12,6 @@ extract_assets/
 
 # results
 extracted_results/
+
+# list of available languages in tesseract
+tesseract_languages.txt
