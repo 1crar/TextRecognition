@@ -21,9 +21,9 @@ if __name__ == '__main__':
 
     start = time.time()
     if IS_IMAGE:
-        image_3 = ImageDataExtracter(path_dir='extract_assets/input_files', image_file='BL24-10003-1.png',
-                                     path_to_tesseract=f'{path_to_tesseract}/{tesseract_exe}', language='deu')
-        result = image_3.extract_data_from_image()
+        image = ImageDataExtracter(path_dir='extract_assets/input_files', image_file='img_1.png',
+                                   path_to_tesseract=f'{path_to_tesseract}/{tesseract_exe}', language='rus')
+        result = image.extract_data_from_image()
         print(result, '---------------Execution time---------------', (time.time() - start), sep='\n')
 
         # записываем результат в extracted_results/Image_result.txt
