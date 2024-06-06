@@ -21,6 +21,9 @@ class Img:
 
 
 class ImageDataExtracter:
+    """
+    Current class for extraction data from image
+    """
     def __init__(self, path_dir: str, image_file: str, path_to_tesseract: str, language: str):
         self._path_dir = path_dir
         self._image_file = image_file
@@ -54,7 +57,7 @@ class ImageDataExtracter:
         return text
 
 
-# Get the list of available
+# Get the list of available languages
 def tesseract_languages(path_to_tesseract: str) -> list[str]:
     # If you don't have tesseract executable in your PATH, include the following:
     pytesseract.pytesseract.tesseract_cmd: str = path_to_tesseract

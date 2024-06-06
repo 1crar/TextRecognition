@@ -1,3 +1,4 @@
+import time
 # To read the PDF
 import PyPDF2
 # To analyze the PDF layout and extract text
@@ -155,8 +156,9 @@ def image_to_text(image_path: str) -> str:
     return text
 
 
-# Находим путь к PDF
-pdf_path = 'extract_assets/input_files/BL24-10003.pdf'
+start = time.time()
+# Устанавливаем путь к PDF
+pdf_path = 'extract_assets/input_files/pdf_1.pdf'
 
 # создаём объект файла PDF
 pdfFileObj: "io.BufferedReader" = open(pdf_path, 'rb')
@@ -278,4 +280,4 @@ with open('extracted_results/PyPdf_result.txt', mode='w', encoding='utf-8') as f
         for el in internal_list:
             file.writelines(str(el))
 
-    # json.dump(text_per_page, file, indent=2, ensure_ascii=False)
+print('---------------Execution time---------------', (time.time() - start), sep='\n')

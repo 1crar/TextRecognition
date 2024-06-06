@@ -1,17 +1,7 @@
 .idea/
-.env
 
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-
-# assets
-extract_assets/
-
-# results
-extracted_results/
-
-# list of available languages in tesseract
-tesseract_languages.txt
