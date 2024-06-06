@@ -156,7 +156,7 @@ def image_to_text(image_path: str) -> str:
 
 
 # Находим путь к PDF
-pdf_path = 'extract_assets/input_files/pdf_5.pdf'
+pdf_path = 'extract_assets/input_files/BL24-10003.pdf'
 
 # создаём объект файла PDF
 pdfFileObj: "io.BufferedReader" = open(pdf_path, 'rb')
