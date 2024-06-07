@@ -5,3 +5,18 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+
+# Assets for extraction
+extract_assets/
+
+# Extraction results
+extracted_results/
+
+
+# env fil
+.env
+
+# avaialabale list of languages
+tesseract_languages.txt
+
