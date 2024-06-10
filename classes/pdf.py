@@ -1,3 +1,4 @@
+import csv
 # Для считывания PDF
 import PyPDF2
 # Для анализа PDF-макета и извлечения текста
@@ -55,14 +56,14 @@ def extract_tables(path_to_pdf: str) -> list:
     return extracted_dt
 
 
-class PdfTabula:
+class PdfTabula(PdfAnalyzer):
     """
     Через Tabula не очень :(
     """
+
+    # Наследуем метод __init__ из PdfAnalyzer
     def __init__(self, path_dir: str, pdf_file: str):
-        self._path_dir = path_dir
-        self._pdf_file = pdf_file
-        self._full_path = f'{self._path_dir}/{self._pdf_file}'
+        super().__init__(path_dir, pdf_file)
 
     def read_pdf(self) -> list:
         file_path: str = self._full_path
@@ -72,27 +73,69 @@ class PdfTabula:
         return tables
 
 
-class PdfCamelot:
+class PdfCamelot(PdfAnalyzer):
+    """
+    Класс, предназначенный для извлечения табличной части пдф и записи извлеченных данных в csv файл
+    """
+
+    # Наследуем метод __init__ из PdfAnalyzer
     def __init__(self, path_dir: str, pdf_file: str):
-        self._path_dir = path_dir
-        self._pdf_file = pdf_file
-        self._full_path = f'{self._path_dir}/{self._pdf_file}'
+        super().__init__(path_dir, pdf_file)
 
-    def convert_to_image(self, png_name: str) -> None:
+    def read_tables(self, num_page: str = 'all') -> "camelot.core.TableList":
         """
 
-        :param png_to_path: Даем название файла (сохраняется в 'extract_assets/output_files/')
-        :return: None
+        :param num_page: Необязательный параметр, all по умолчанию
+        :return: возвращает объект camelot.core.TableList (по сути, список таблиц)
         """
-        folder = 'extract_assets/output_files/'
+        tables = camelot.read_pdf(
+            filepath=self._full_path,
+            pages=num_page)
+        return tables
 
-        # Открываем документ
-        doc = fitz.open(self._full_path)
-        for page in doc.pages():
-            # Переводим страницу в картинку
-            pix = page.get_pixmap()
-            # Сохраняем
-            pix.save(f'{folder}{png_name}')
+    @staticmethod
+    def write_to_csv(tables: "camelot.core.TableList", file_csv_name: str) -> None:
+        folder = 'extracted_results/'
+
+        with open(file=f'{folder}{file_csv_name}', mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+
+            for table in tables:
+
+                cleaned_table = []
+                for row in table.data[1:]:
+                    cleaned_row = [item.replace('\n', ' ') for item in row]
+                    cleaned_table.append(cleaned_row)
+                print(cleaned_table)
+
+                for row in cleaned_table:
+                    writer.writerow(row)
+
+
+class PdfTextReader(PdfAnalyzer):
+    """
+    Предназначен только для чтения текста из pdf файла:
+    """
+
+    # Наследуем метод __init__ из PdfAnalyzer
+    def __init__(self, path_dir: str, pdf_file: str):
+        super().__init__(path_dir, pdf_file)
+
+    def extract_text_from_pdf(self) -> str:
+        text = ''
+        with open(self._full_path, 'rb') as file:
+            pdf_reader = PyPDF2.PdfFileReader(file)
+            num_pages = pdf_reader.numPages
+
+            for page_num in range(num_pages):
+                page = pdf_reader.getPage(page_num)
+                text += page.extract_text()
+        return text
+
+
+
+
+
 
 
 

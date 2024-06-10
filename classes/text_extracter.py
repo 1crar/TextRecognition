@@ -47,3 +47,9 @@ class PatternDataExtraction:
         self.data_collection['term_delivery'] = terms_delivery
 
         return self.data_collection
+
+
+class InnDataExtraction:
+    def __init__(self):
+        pass
+

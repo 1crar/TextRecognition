@@ -2,9 +2,10 @@ import os
 import time
 import camelot
 import csv
+import re
 
 from dotenv import load_dotenv
-from classes.pdf import PdfAnalyzer, PdfTabula, PdfCamelot, extract_tables
+from classes.pdf import PdfAnalyzer, PdfTabula, PdfCamelot, PdfTextReader, extract_tables
 from classes.img import ImageDataExtracter, tesseract_languages
 
 # Загружаем переменные из файла .env
@@ -32,39 +33,33 @@ if __name__ == '__main__':
         with open(file='extracted_results/Image_result.txt', mode='w', encoding='utf-8') as f:
             print(result, file=f)
     else:
-        tables = camelot.read_pdf(
-            filepath='extract_assets/input_files/for_camelot_extraction/УПД №1196036_0038 от 04.06.24.pdf',
-            pages='all')
-
-        print(len(tables))
-
-        with open(file='extracted_results/Camelot_result.csv', mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-
-            for table in tables:
-
-                cleaned_table = []
-                for row in table.data[1:]:
-                    cleaned_row = [item.replace('\n', ' ') for item in row]
-                    cleaned_table.append(cleaned_row)
-                print(cleaned_table)
-
-                for row in cleaned_table:
-                    writer.writerow(row)
-
-
-        # for table in tables:
-        #     cleaned_table: list[list] = []
+        # camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/for_camelot_extraction',
+        #                               pdf_file='УПД №1196036_0038 от 04.06.24.pdf')
         #
-        #     for row in table.data[1:]:
-        #         # Очищаем от переходов
-        #         cleaned_row = [item.replace('\n', ' ') for item in row]
-        #         cleaned_table.append(cleaned_row)
-        #
-        #     print(cleaned_table)
-        #
-        #     with open(file='extracted_results/Camelot_result.csv', mode='w', newline='', encoding='utf-8') as file:
-        #         writer = csv.writer(file)
-        #
-        #         for row in cleaned_table:
-        #             writer.writerow(row)
+        # tables = camelot_instance.read_tables()
+        # camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
+
+        pdf = PdfTextReader(path_dir='extract_assets/input_files/for_camelot_extraction',
+                            pdf_file='УПД №1196036_0038 от 04.06.24.pdf')
+        text = pdf.extract_text_from_pdf()
+
+        # Регулярное выражение для извлечения значений ИНН/КПП
+        pattern_inn_kpp = re.compile(r'ИНН/КПП (\d{10}) / (\d{9})')
+
+        # Регулярное выражение для извлечения номера Счет-фактуры
+        pattern_invoice_number = re.compile(r'УПД Счет-фактура № (\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
+
+        # Поиск значений ИНН/КПП и номера Счет-фактуры в тексте
+        inn_kpp_matches = pattern_inn_kpp.findall(text)
+        invoice_number_matches = pattern_invoice_number.findall(text)
+
+        # Вывод результатов
+        for matches in inn_kpp_matches:
+            print(f"ИНН: {matches[0]}, КПП: {matches[1]}")
+
+        for matches in invoice_number_matches:
+            print(f"Номер Счет-фактуры: {matches[0]}")
+
+        with open(file='extracted_results/PyPdf_result.txt', mode='w', encoding='utf-8') as file:
+            file.write(text)
+
