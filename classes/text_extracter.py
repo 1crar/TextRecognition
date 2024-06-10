@@ -49,7 +49,21 @@ class PatternDataExtraction:
         return self.data_collection
 
 
-class InnDataExtraction:
-    def __init__(self):
-        pass
+class InnInvoiceDataExtraction:
+    def __init__(self, text: str):
+        self._text = text
+        self._inn_kpp_numbers: list = []
+        self._invoices: list = []
+
+    def inn_and_kpp_extract(self) -> list:
+        pattern_inn_kpp = re.compile(r'ИНН/КПП (\d{10}) / (\d{9})')
+        inn_kpp_matches = pattern_inn_kpp.findall(self._text)
+
+        # Вывод результатов
+        for matches in inn_kpp_matches:
+            self._inn_kpp_numbers.append(matches[0])
+            self._inn_kpp_numbers.append(matches[1])
+
+        return self._inn_kpp_numbers
+
 
