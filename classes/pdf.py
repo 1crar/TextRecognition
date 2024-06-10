@@ -3,8 +3,16 @@ import PyPDF2
 # Для анализа PDF-макета и извлечения текста
 from pdfminer.high_level import extract_pages, extract_text
 from pdfminer.layout import LTTextContainer, LTChar, LTRect, LTFigure
-# Для извлечения текста из таблиц в PDF
+
+# Для извлечения текста из таблиц в PDF (для класса PdfTabula)
 import pdfplumber
+import tabula
+
+# Для класса PdfCamelot
+import pandas as pd
+import camelot
+# Так импортируется PyMuPDF
+import sys, fitz
 
 
 class PdfAnalyzer:
@@ -45,4 +53,51 @@ def extract_tables(path_to_pdf: str) -> list:
             extracted_dt.append(table)
 
     return extracted_dt
+
+
+class PdfTabula:
+    """
+    Через Tabula не очень :(
+    """
+    def __init__(self, path_dir: str, pdf_file: str):
+        self._path_dir = path_dir
+        self._pdf_file = pdf_file
+        self._full_path = f'{self._path_dir}/{self._pdf_file}'
+
+    def read_pdf(self) -> list:
+        file_path: str = self._full_path
+        # Используйте функцию read_pdf для извлечения таблиц из PDF
+        tables = tabula.read_pdf(file_path, pages='all', multiple_tables=True)
+        # print(tables)
+        return tables
+
+
+class PdfCamelot:
+    def __init__(self, path_dir: str, pdf_file: str):
+        self._path_dir = path_dir
+        self._pdf_file = pdf_file
+        self._full_path = f'{self._path_dir}/{self._pdf_file}'
+
+    def convert_to_image(self, png_name: str) -> None:
+        """
+
+        :param png_to_path: Даем название файла (сохраняется в 'extract_assets/output_files/')
+        :return: None
+        """
+        folder = 'extract_assets/output_files/'
+
+        # Открываем документ
+        doc = fitz.open(self._full_path)
+        for page in doc.pages():
+            # Переводим страницу в картинку
+            pix = page.get_pixmap()
+            # Сохраняем
+            pix.save(f'{folder}{png_name}')
+
+
+
+
+
+
+
 

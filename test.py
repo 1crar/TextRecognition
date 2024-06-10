@@ -158,7 +158,7 @@ def image_to_text(image_path: str) -> str:
 
 start = time.time()
 # Устанавливаем путь к PDF
-pdf_path = 'extract_assets/input_files/pdf_1.pdf'
+pdf_path = 'extract_assets/input_files/УПД.pdf'
 
 # создаём объект файла PDF
 pdfFileObj: "io.BufferedReader" = open(pdf_path, 'rb')
@@ -274,6 +274,7 @@ pdfFileObj.close()
 print(text_per_page, text_per_page['Page_0'], sep='\n')
 
 with open('extracted_results/PyPdf_result.txt', mode='w', encoding='utf-8') as file:
+    # Дублирование извлеченного текста (Почему)
     list_from_text_per_page: list = text_per_page['Page_0']
 
     for internal_list in list_from_text_per_page:
