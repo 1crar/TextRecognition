@@ -44,23 +44,23 @@ if __name__ == '__main__':
         start = time.time()
         # Camelot extraction (from pdf(dataTable) to csv)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/for_camelot_extraction',
-                                      pdf_file='УПД.pdf')
+                                      pdf_file='УКД №243466 от 31.05.24.pdf')
 
         tables = camelot_instance.read_tables()
         camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
 
         # Re extraction (inn/kpp and invoice) to json
         pdf = PdfTextReader(path_dir='extract_assets/input_files/for_camelot_extraction',
-                            pdf_file='УПД.pdf')
+                            pdf_file='УКД №243466 от 31.05.24.pdf')
         text = pdf.extract_text_from_pdf()
         # print(text.replace(' ', ''))
 
         my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
 
         inn_kpp: str = my_regulars.inn_and_kpp_extract()
-        invoices: list = my_regulars.invoice_extract()
+        invoice: str = my_regulars.invoice_extract()
 
-        data = my_regulars.data_collect(inn_kpp_seller=inn_kpp, invoices=invoices)
+        data = my_regulars.data_collect(inn_kpp_seller=inn_kpp, invoice=invoice)
 
         if type(data) == dict:
             DictToJson.write_to_json(collection=data)
