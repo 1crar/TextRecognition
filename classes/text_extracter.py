@@ -1,6 +1,7 @@
 import re
 import json
 
+
 class PatternDataExtraction:
     def __init__(self, txt: str):
         self.txt: str = txt
@@ -53,7 +54,7 @@ class InnInvoiceDataExtraction:
     def __init__(self, text: str):
         self._text = text
 
-        self.inn_kpp_nums: list = []
+        self.inn_kpp_seller: str = ''
         self.invoices: list = []
         self.data_collection: dict = {}
 
@@ -61,32 +62,31 @@ class InnInvoiceDataExtraction:
     def text(self) -> str:
         return self._text
 
-    def inn_and_kpp_extract(self) -> list:
-        pattern_inn_kpp = re.compile(r'ИНН/КПП (\d{10}) / (\d{9})')
-        inn_kpp_matches = pattern_inn_kpp.findall(self._text)
+    def inn_and_kpp_extract(self) -> str:
+        pattern_inn_kpp = r'\d{10}/\d{9}'
+        result = re.search(pattern_inn_kpp, self._text.replace(' ', ''), re.DOTALL)
+        self.inn_kpp_seller = result.group(0)
 
-        # Вывод результатов
-        for matches in inn_kpp_matches:
-            self.inn_kpp_nums.append(matches[0])
-            self.inn_kpp_nums.append(matches[1])
-
-        return self.inn_kpp_nums
+        return self.inn_kpp_seller
     
     def invoice_extract(self) -> list:
         # Регулярное выражение для извлечения номера Счет-фактуры
-        pattern_invoice_number = re.compile(r'УПД Счет-фактура № (\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
+        pattern_invoice_number = re.compile(r'Счет-фактура№(\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
         invoice_number_matches = pattern_invoice_number.findall(self._text)
         for matches in invoice_number_matches:
             self.invoices.append((matches[0]))
         
         return self.invoices
     
-    def data_collect(self, inn_kpp_nums: list, invoices: list) -> dict:
-        self.data_collection['inn_kpp_1'] = f'{inn_kpp_nums[0]}/{inn_kpp_nums[1]}'
-        self.data_collection['inn_kpp_2'] = f'{inn_kpp_nums[2]}/{inn_kpp_nums[3]}'
-        self.data_collection['invoice'] = invoices[0]
-        
-        return self.data_collection
+    def data_collect(self, inn_kpp_seller: str, invoices: list) -> dict | Exception:
+        print(f'Инн кпп продавца: {inn_kpp_seller}\nНомер счет фактуры: {invoices}')
+        try:
+            self.data_collection['inn_kpp_seller'] = inn_kpp_seller
+            self.data_collection['invoice'] = invoices[0]
+
+            return self.data_collection
+        except IndexError as e:
+            return e
 
 
 class DictToJson:
