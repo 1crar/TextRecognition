@@ -23,4 +23,6 @@ tesseract_languages.txt
 # status file description
 status.txt
 
+# log data file
+data.log
 

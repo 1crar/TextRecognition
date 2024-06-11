@@ -1,16 +1,18 @@
 import os
 import time
-import camelot
-import csv
-import re
+import logging
 
 from dotenv import load_dotenv
+from log_config.log_config import activate_logging
+
 from classes.pdf import PdfAnalyzer, PdfTabula, PdfCamelot, PdfTextReader, extract_tables
 from classes.img import ImageDataExtracter, tesseract_languages
 from classes.text_extracter import InnInvoiceDataExtraction, DictToJson
 
 # Загружаем переменные из файла .env
 load_dotenv()
+# Подключаем главный лог
+logger = logging.getLogger()
 
 path_to_tesseract: str = os.getenv('TESSERACT_PATH_DIR')
 tesseract_exe: str = os.getenv('EXECUTION_FILE')
@@ -24,6 +26,7 @@ if __name__ == '__main__':
         print(tesseract_languages(path_to_tesseract=f'{path_to_tesseract}/{tesseract_exe}'), file=f)
 
     if IS_IMAGE:
+        activate_logging()
         start = time.time()
         image = ImageDataExtracter(path_dir='extract_assets/input_files', image_file='IMG_20240603_191413.jpg',
                                    path_to_tesseract=f'{path_to_tesseract}/{tesseract_exe}', language='rus')
@@ -34,6 +37,7 @@ if __name__ == '__main__':
         with open(file='extracted_results/Image_result.txt', mode='w', encoding='utf-8') as f:
             print(result, file=f)
     else:
+        activate_logging()
         """
         ИНН Исполнителя, КПП Исполнителя, Номер акта / упд / сф, договор
         """
@@ -49,16 +53,17 @@ if __name__ == '__main__':
         pdf = PdfTextReader(path_dir='extract_assets/input_files/for_camelot_extraction',
                             pdf_file='УПД.pdf')
         text = pdf.extract_text_from_pdf()
-        print(text.replace(' ', ''))
+        # print(text.replace(' ', ''))
 
-        # my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
-        #
-        # inn_kpp: str = my_regulars.inn_and_kpp_extract()
-        # invoices: list = my_regulars.invoice_extract()
-        #
-        # data = my_regulars.data_collect(inn_kpp_seller=inn_kpp, invoices=invoices)
-        #
-        # if type(data) == dict:
-        #     DictToJson.write_to_json(collection=data)
-        #
+        my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
+
+        inn_kpp: str = my_regulars.inn_and_kpp_extract()
+        invoices: list = my_regulars.invoice_extract()
+
+        data = my_regulars.data_collect(inn_kpp_seller=inn_kpp, invoices=invoices)
+
+        if type(data) == dict:
+            DictToJson.write_to_json(collection=data)
+        logger.info('---------------Execution time: %s---------------', f'{(time.time() - start):.2f} seconds')
+
         # print(data, '---------------Execution time---------------', f'{(time.time() - start):.2f} seconds', sep='\n')

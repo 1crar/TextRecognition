@@ -1,5 +1,8 @@
 import re
 import json
+from logging import getLogger
+
+logger = getLogger(__name__)        # __name__ - имя модуля
 
 
 class PatternDataExtraction:
@@ -66,26 +69,29 @@ class InnInvoiceDataExtraction:
         pattern_inn_kpp = r'\d{10}/\d{9}'
         result = re.search(pattern_inn_kpp, self._text.replace(' ', ''), re.DOTALL)
         self.inn_kpp_seller = result.group(0)
-
+        logger.info("ИНН/КПП %s", self.inn_kpp_seller)
         return self.inn_kpp_seller
     
     def invoice_extract(self) -> list:
         # Регулярное выражение для извлечения номера Счет-фактуры
-        pattern_invoice_number = re.compile(r'Счет-фактура№(\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
+        # pattern_invoice_number = re.compile(r'Счет-фактура№(\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
+
+        pattern_invoice_number = re.compile(r'\d+/\d+|\d+')
         invoice_number_matches = pattern_invoice_number.findall(self._text)
         for matches in invoice_number_matches:
             self.invoices.append((matches[0]))
-        
+        logger.info("Счет-фактура документа: %s", self.invoices)
         return self.invoices
     
     def data_collect(self, inn_kpp_seller: str, invoices: list) -> dict | Exception:
-        print(f'Инн кпп продавца: {inn_kpp_seller}\nНомер счет фактуры: {invoices}')
+        # print(f'Инн кпп продавца: {inn_kpp_seller}\nНомер счет фактуры: {invoices}')
+        self.data_collection['inn_kpp_seller'] = inn_kpp_seller
         try:
-            self.data_collection['inn_kpp_seller'] = inn_kpp_seller
             self.data_collection['invoice'] = invoices[0]
-
+            logger.info('JSON data:\n%s', self.data_collection)
             return self.data_collection
         except IndexError as e:
+            logger.error('Ошибка - %s', e)
             return e
 
 
