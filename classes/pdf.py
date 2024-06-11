@@ -106,7 +106,6 @@ class PdfCamelot(PdfAnalyzer):
                 for row in table.data[1:]:
                     cleaned_row = [item.replace('\n', ' ') for item in row]
                     cleaned_table.append(cleaned_row)
-                print(cleaned_table)
 
                 for row in cleaned_table:
                     writer.writerow(row)
@@ -123,6 +122,7 @@ class PdfTextReader(PdfAnalyzer):
 
     def extract_text_from_pdf(self) -> str:
         text = ''
+
         with open(self._full_path, 'rb') as file:
             pdf_reader = PyPDF2.PdfFileReader(file)
             num_pages = pdf_reader.numPages

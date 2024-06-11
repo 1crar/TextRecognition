@@ -1,5 +1,5 @@
 import re
-
+import json
 
 class PatternDataExtraction:
     def __init__(self, txt: str):
@@ -52,8 +52,14 @@ class PatternDataExtraction:
 class InnInvoiceDataExtraction:
     def __init__(self, text: str):
         self._text = text
-        self._inn_kpp_numbers: list = []
-        self._invoices: list = []
+
+        self.inn_kpp_nums: list = []
+        self.invoices: list = []
+        self.data_collection: dict = {}
+
+    @property
+    def text(self) -> str:
+        return self._text
 
     def inn_and_kpp_extract(self) -> list:
         pattern_inn_kpp = re.compile(r'ИНН/КПП (\d{10}) / (\d{9})')
@@ -61,9 +67,30 @@ class InnInvoiceDataExtraction:
 
         # Вывод результатов
         for matches in inn_kpp_matches:
-            self._inn_kpp_numbers.append(matches[0])
-            self._inn_kpp_numbers.append(matches[1])
+            self.inn_kpp_nums.append(matches[0])
+            self.inn_kpp_nums.append(matches[1])
 
-        return self._inn_kpp_numbers
+        return self.inn_kpp_nums
+    
+    def invoice_extract(self) -> list:
+        # Регулярное выражение для извлечения номера Счет-фактуры
+        pattern_invoice_number = re.compile(r'УПД Счет-фактура № (\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
+        invoice_number_matches = pattern_invoice_number.findall(self._text)
+        for matches in invoice_number_matches:
+            self.invoices.append((matches[0]))
+        
+        return self.invoices
+    
+    def data_collect(self, inn_kpp_nums: list, invoices: list) -> dict:
+        self.data_collection['inn_kpp_1'] = f'{inn_kpp_nums[0]}/{inn_kpp_nums[1]}'
+        self.data_collection['inn_kpp_2'] = f'{inn_kpp_nums[2]}/{inn_kpp_nums[3]}'
+        self.data_collection['invoice'] = invoices[0]
+        
+        return self.data_collection
 
 
+class DictToJson:
+    @staticmethod
+    def write_to_json(collection: dict) -> None:
+        with open('extracted_results/data.json', 'w') as file:
+            json.dump(collection, file)
