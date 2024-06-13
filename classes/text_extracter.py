@@ -69,7 +69,10 @@ class InnInvoiceDataExtraction:
     def inn_and_kpp_extract(self) -> str:
         pattern_inn_kpp = r'\d{10}/\d{9}'
         result = re.search(pattern_inn_kpp, self._text.replace(' ', '').lower(), re.DOTALL)
-        self.inn_kpp_seller = result.group(0)
+        try:
+            self.inn_kpp_seller = result.group(0)
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте self.inn_kpp_seller: %s', e)
 
         logger.info("ИНН/КПП %s", self.inn_kpp_seller)
 
@@ -78,16 +81,18 @@ class InnInvoiceDataExtraction:
     def invoice_extract(self) -> str:
         # Регулярное выражение для извлечения номера Счет-фактуры
         # pattern_invoice_number = re.compile(r'Счет-фактура№(\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
-        pattern_invoice_number = r'\d+'
         pattern_invoice_number = re.compile(r'счет-фактура№(\d+)')
         result = re.search(pattern_invoice_number, self._text.replace(' ', '').lower())
-        self.invoice = result.group(0)
+        try:
+            self.invoice = result.group(0)
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте self.invoice: %s', e)
 
         logger.info("счет-фактура документа: %s", self.invoice)
         return self.invoice
 
     def contract_extract(self) -> str:
-        matches = re.findall(r'Договор №(\S+)\s+от\s+([\d.]+)', self._text)
+        matches = re.findall(r'Договор №(\w+)\s+от\s+([\d.]+)', self._text)
         logger.info('Совпадение контрактов\n%s', matches)
 
         for match in matches:

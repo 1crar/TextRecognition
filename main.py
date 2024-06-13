@@ -43,14 +43,14 @@ if __name__ == '__main__':
         ИНН Исполнителя, КПП Исполнителя, Номер акта / упд / сф, договор
         """
         # Camelot extraction (from pdf(dataTable) to csv)
-        camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/for_camelot_extraction',
-                                      pdf_file='УКД №243466 от 31.05.24.pdf')
+        camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
+                                      pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
         tables = camelot_instance.read_tables()
         camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
 
         # Re extraction (inn/kpp and invoice) to json
-        pdf = PdfTextReader(path_dir='extract_assets/input_files/for_camelot_extraction',
-                            pdf_file='УКД №243466 от 31.05.24.pdf')
+        pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
+                            pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
         text = pdf.extract_text_from_pdf()
 
         my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
