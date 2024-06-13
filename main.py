@@ -44,17 +44,13 @@ if __name__ == '__main__':
         """
         # Camelot extraction (from pdf(dataTable) to csv)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/for_camelot_extraction',
-                                      pdf_file='УПД № 70385 от 2024-05-27.pdf')
-
-        try:
-            tables = camelot_instance.read_tables()
-            camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
-        except:
-            logger.error('Ошибка')
+                                      pdf_file='УКД №243466 от 31.05.24.pdf')
+        tables = camelot_instance.read_tables()
+        camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
 
         # Re extraction (inn/kpp and invoice) to json
         pdf = PdfTextReader(path_dir='extract_assets/input_files/for_camelot_extraction',
-                            pdf_file='УПД № 70385 от 2024-05-27.pdf')
+                            pdf_file='УКД №243466 от 31.05.24.pdf')
         text = pdf.extract_text_from_pdf()
 
         my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
@@ -62,8 +58,9 @@ if __name__ == '__main__':
 
         inn_kpp: str = my_regulars.inn_and_kpp_extract()
         invoice: str = my_regulars.invoice_extract()
+        contract_number: str = my_regulars.contract_extract()
 
-        data = my_regulars.data_collect(inn_kpp_seller=inn_kpp, invoice=invoice)
+        data = my_regulars.data_collect(inn_kpp_seller=inn_kpp, invoice=invoice, contract_number=contract_number)
 
         if type(data) == dict:
             DictToJson.write_to_json(collection=data)
