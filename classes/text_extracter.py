@@ -55,7 +55,7 @@ class PatternDataExtraction:
 
 class InnInvoiceDataExtraction:
     def __init__(self, text: str):
-        self._text = text.replace(' ', '')
+        self._text = text.replace(' ', '').lower()
 
         self.inn_kpp_seller: str = ''
         self.invoice: str = ''
@@ -78,7 +78,7 @@ class InnInvoiceDataExtraction:
         # Регулярное выражение для извлечения номера Счет-фактуры
         # pattern_invoice_number = re.compile(r'Счет-фактура№(\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
         pattern_invoice_number = r'\d+'
-        pattern_invoice_number = re.compile(r'Счет-фактура№(\d+)')
+        pattern_invoice_number = re.compile(r'счет-фактура№(\d+)')
         result = re.search(pattern_invoice_number, self._text)
         self.invoice = result.group(0)
         
@@ -87,7 +87,7 @@ class InnInvoiceDataExtraction:
         # for matches in invoice_number_matches:
         #     self.invoice.append((matches[0]))
 
-        logger.info("Счет-фактура документа: %s", self.invoice)
+        logger.info("счет-фактура документа: %s", self.invoice)
         return self.invoice
     
     def data_collect(self, inn_kpp_seller: str, invoice: str) -> dict | Exception:
@@ -106,6 +106,9 @@ class InnInvoiceDataExtraction:
 
 
 class DictToJson:
+    """
+    Класс для записи хэш-таблицы в json файл
+    """
     @staticmethod
     def write_to_json(collection: dict) -> None:
         with open(file='extracted_results/data.json', mode='w', encoding='utf-8') as file:

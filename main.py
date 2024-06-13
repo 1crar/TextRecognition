@@ -37,25 +37,28 @@ if __name__ == '__main__':
         with open(file='extracted_results/Image_result.txt', mode='w', encoding='utf-8') as f:
             print(result, file=f)
     else:
+        start = time.time()
         activate_logging()
         """
         ИНН Исполнителя, КПП Исполнителя, Номер акта / упд / сф, договор
         """
-        start = time.time()
         # Camelot extraction (from pdf(dataTable) to csv)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/for_camelot_extraction',
-                                      pdf_file='УКД №243466 от 31.05.24.pdf')
+                                      pdf_file='УПД № 70385 от 2024-05-27.pdf')
 
-        tables = camelot_instance.read_tables()
-        camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
+        try:
+            tables = camelot_instance.read_tables()
+            camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
+        except:
+            logger.error('Ошибка')
 
         # Re extraction (inn/kpp and invoice) to json
         pdf = PdfTextReader(path_dir='extract_assets/input_files/for_camelot_extraction',
-                            pdf_file='УКД №243466 от 31.05.24.pdf')
+                            pdf_file='УПД № 70385 от 2024-05-27.pdf')
         text = pdf.extract_text_from_pdf()
-        # print(text.replace(' ', ''))
 
         my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
+        logger.info('Извлеченный текст документа:\n\n%s\n', my_regulars.text)
 
         inn_kpp: str = my_regulars.inn_and_kpp_extract()
         invoice: str = my_regulars.invoice_extract()

@@ -26,3 +26,6 @@ status.txt
 # log data file
 data.log
 
+# for testing regulars
+regular_testing.py
+
