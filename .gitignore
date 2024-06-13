@@ -5,3 +5,30 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+
+# Assets for extraction
+extract_assets/
+
+# Extraction results
+extracted_results/
+
+
+# env fil
+.env
+
+# avaialabale list of languages
+tesseract_languages.txt
+
+# status file description
+status.txt
+
+# log data file
+data.log
+
+# for testing regulars
+regular_testing.py
+
+# results
+result.txt
+
