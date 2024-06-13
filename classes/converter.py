@@ -11,7 +11,8 @@ class Converter:
         """
         pass
 
-    def convert_from_pdf_to_img(self, pdf_path: str, to_save: str) -> None:
+    @staticmethod
+    def convert_from_pdf_to_img(pdf_path: str, to_save: str) -> None:
         # Второй параметр влияет на качество изображения (при необходимости можно поставить выше значение)
         pages = convert_from_path(pdf_path=pdf_path, dpi=200)
         # Сохраняем каждое изображение в PNG формате

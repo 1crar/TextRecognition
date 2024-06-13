@@ -1,4 +1,8 @@
 import re
+import json
+from logging import getLogger
+
+logger = getLogger(__name__)        # __name__ - имя модуля
 
 
 class PatternDataExtraction:
@@ -47,3 +51,72 @@ class PatternDataExtraction:
         self.data_collection['term_delivery'] = terms_delivery
 
         return self.data_collection
+
+
+class InnInvoiceDataExtraction:
+    def __init__(self, text: str):
+        self._text = text
+
+        self.inn_kpp_seller: str = ''
+        self.invoice: str = ''
+        self.contract_number: str = ''
+        self.data_collection: dict = {}
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+    def inn_and_kpp_extract(self) -> str:
+        pattern_inn_kpp = r'\d{10}/\d{9}'
+        result = re.search(pattern_inn_kpp, self._text.replace(' ', '').lower(), re.DOTALL)
+        try:
+            self.inn_kpp_seller = result.group(0)
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте self.inn_kpp_seller: %s', e)
+
+        logger.info("ИНН/КПП %s", self.inn_kpp_seller)
+
+        return self.inn_kpp_seller
+    
+    def invoice_extract(self) -> str:
+        # Регулярное выражение для извлечения номера Счет-фактуры
+        # pattern_invoice_number = re.compile(r'Счет-фактура№(\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
+        pattern_invoice_number = re.compile(r'счет-фактура№(\d+)')
+        result = re.search(pattern_invoice_number, self._text.replace(' ', '').lower())
+        try:
+            self.invoice = result.group(0)
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте self.invoice: %s', e)
+
+        logger.info("счет-фактура документа: %s", self.invoice)
+        return self.invoice
+
+    def contract_extract(self) -> str:
+        matches = re.findall(r'Договор №(\w+)\s+от\s+([\d.]+)', self._text)
+        logger.info('Совпадение контрактов\n%s', matches)
+
+        for match in matches:
+            self.contract_number = f'№{match[0]} от {match[1]}'
+        return self.contract_number
+
+    def data_collect(self, inn_kpp_seller: str, invoice: str, contract_number: str) -> dict | Exception:
+        # print(f'Инн кпп продавца: {inn_kpp_seller}\nНомер счет фактуры: {invoices}')
+        self.data_collection['inn_kpp_seller'] = inn_kpp_seller
+        self.data_collection['contract_number'] = contract_number
+        try:
+            self.data_collection['invoice'] = invoice[13:]
+            logger.info('JSON data: %s', self.data_collection)
+            return self.data_collection
+        except IndexError as e:
+            logger.error('Ошибка - %s', e)
+            return e
+
+
+class DictToJson:
+    """
+    Класс для записи хэш-таблицы в json файл
+    """
+    @staticmethod
+    def write_to_json(collection: dict) -> None:
+        with open(file='extracted_results/data.json', mode='w', encoding='utf-8') as file:
+            json.dump(obj=collection, fp=file, ensure_ascii=False, indent=4)

@@ -1,41 +1,69 @@
 import os
 import time
+import logging
 
 from dotenv import load_dotenv
-from classes.pdf import PdfAnalyzer, extract_tables
+from log_config.log_config import activate_logging
+
+from classes.pdf import PdfAnalyzer, PdfTabula, PdfCamelot, PdfTextReader, extract_tables
 from classes.img import ImageDataExtracter, tesseract_languages
+from classes.text_extracter import InnInvoiceDataExtraction, DictToJson
 
 # Загружаем переменные из файла .env
 load_dotenv()
+# Подключаем главный лог
+logger = logging.getLogger()
 
 path_to_tesseract: str = os.getenv('TESSERACT_PATH_DIR')
 tesseract_exe: str = os.getenv('EXECUTION_FILE')
 
 # Позволяет выбрать из какого формата будем извлекать (если True, то из картинки. False - из пдф)
-IS_IMAGE: bool = True
+IS_IMAGE: bool = False
 
 if __name__ == '__main__':
     # Write list of available languages to file
     with open(file='tesseract_languages.txt', mode='w', encoding='utf-8') as f:
         print(tesseract_languages(path_to_tesseract=f'{path_to_tesseract}/{tesseract_exe}'), file=f)
 
-    start = time.time()
     if IS_IMAGE:
-        image = ImageDataExtracter(path_dir='extract_assets/input_files', image_file='img_1.png',
+        activate_logging()
+        start = time.time()
+        image = ImageDataExtracter(path_dir='extract_assets/input_files', image_file='IMG_20240603_191413.jpg',
                                    path_to_tesseract=f'{path_to_tesseract}/{tesseract_exe}', language='rus')
         result = image.extract_data_from_image()
-        print(result, '---------------Execution time---------------', (time.time() - start), sep='\n')
+        print(result, '---------------Execution time---------------', f'{(time.time() - start):.2f}', sep='\n')
 
         # записываем результат в extracted_results/Image_result.txt
         with open(file='extracted_results/Image_result.txt', mode='w', encoding='utf-8') as f:
             print(result, file=f)
     else:
-        # Создаем экземпляр класса и присваиваем конкретный pdf-документ, который будем парсить
-        pdf_example = PdfAnalyzer(path_dir='extract_assets', pdf_file='pdf_1.pdf')
-        print(pdf_example.full_path)
+        start = time.time()
+        activate_logging()
+        """
+        ИНН Исполнителя, КПП Исполнителя, Номер акта / упд / сф, договор
+        """
+        # Camelot extraction (from pdf(dataTable) to csv)
+        camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
+                                      pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
+        tables = camelot_instance.read_tables()
+        camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
 
-        # Условие срабатывает, если в pdf-документе есть табличная часть
-        if pdf_example.is_contains_data_table():
-            # Функция возвращает данные в виде списка, извлеченные из табличной части
-            pdf_table = extract_tables(path_to_pdf=pdf_example.full_path)
-            print(f'данные в pdf_table\n{pdf_table}')
+        # Re extraction (inn/kpp and invoice) to json
+        pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
+                            pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
+        text = pdf.extract_text_from_pdf()
+
+        my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
+        logger.info('Извлеченный текст документа:\n\n%s\n', my_regulars.text)
+
+        inn_kpp: str = my_regulars.inn_and_kpp_extract()
+        invoice: str = my_regulars.invoice_extract()
+        contract_number: str = my_regulars.contract_extract()
+
+        data = my_regulars.data_collect(inn_kpp_seller=inn_kpp, invoice=invoice, contract_number=contract_number)
+
+        if type(data) == dict:
+            DictToJson.write_to_json(collection=data)
+        logger.info('---------------Execution time: %s---------------', f'{(time.time() - start):.2f} seconds')
+
+        # print(data, '---------------Execution time---------------', f'{(time.time() - start):.2f} seconds', sep='\n')
