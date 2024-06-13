@@ -29,3 +29,6 @@ data.log
 # for testing regulars
 regular_testing.py
 
+# results
+result.txt
+
