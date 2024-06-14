@@ -44,17 +44,17 @@ if __name__ == '__main__':
         """
         # Camelot extraction (from pdf(dataTable) to csv)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
-                                      pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
+                                      pdf_file='УПД №1196036_0038 от 04.06.24.pdf')
         tables = camelot_instance.read_tables()
         camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
 
         # Re extraction (inn/kpp and invoice) to json
         pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
-                            pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
+                            pdf_file='УПД №1196036_0038 от 04.06.24.pdf')
         text = pdf.extract_text_from_pdf()
 
         my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
-        logger.info('Извлеченный текст документа:\n\n%s\n', my_regulars.text)
+        logger.info('Извлеченный текст документа:\n\n%s\n', my_regulars.text.replace(' ', '').lower())
 
         inn_kpp: str = my_regulars.inn_and_kpp_extract()
         invoice: str = my_regulars.invoice_extract()
