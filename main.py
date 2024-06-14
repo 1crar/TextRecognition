@@ -44,13 +44,17 @@ if __name__ == '__main__':
         """
         # Camelot extraction (from pdf(dataTable) to csv)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
-                                      pdf_file='УПД №1196036_0038 от 04.06.24.pdf')
+                                      pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
         tables = camelot_instance.read_tables()
+        table: list = tables[0].data
+        
+        logger.info("Таблица 1 \n%s\nТип данных таблицы --- %s", tables[0].data, type(tables[0].data))
+
         camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
 
         # Re extraction (inn/kpp and invoice) to json
         pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
-                            pdf_file='УПД №1196036_0038 от 04.06.24.pdf')
+                            pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
         text = pdf.extract_text_from_pdf()
 
         my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
@@ -60,7 +64,8 @@ if __name__ == '__main__':
         invoice: str = my_regulars.invoice_extract()
         contract_number: str = my_regulars.contract_extract()
 
-        data = my_regulars.data_collect(inn_kpp_seller=inn_kpp, invoice=invoice, contract_number=contract_number)
+        data = my_regulars.data_collect(inn_kpp=inn_kpp, invoice=invoice, contract_number=contract_number,
+                                        data_table=table[:len(table)-1])
 
         if type(data) == dict:
             DictToJson.write_to_json(collection=data)

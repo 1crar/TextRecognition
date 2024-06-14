@@ -57,7 +57,7 @@ class InnInvoiceDataExtraction:
     def __init__(self, text: str):
         self._text = text
 
-        self.inn_kpp_seller: str = ''
+        self.inn_kpp: str = ''
         self.invoice: str = ''
         self.contract_number: str = ''
         self.data_collection: dict = {}
@@ -70,13 +70,13 @@ class InnInvoiceDataExtraction:
         pattern_inn_kpp = r'\d{10}/\d{9}'
         result = re.search(pattern_inn_kpp, self._text.replace(' ', '').lower(), re.DOTALL)
         try:
-            self.inn_kpp_seller = result.group(0)
+            self.inn_kpp = result.group(0)
         except AttributeError as e:
-            logger.error('Ошибка в атрибуте self.inn_kpp_seller: %s', e)
+            logger.error('Ошибка в атрибуте self.inn_kpp: %s', e)
 
-        logger.info("ИНН/КПП %s", self.inn_kpp_seller)
+        logger.info("ИНН/КПП %s", self.inn_kpp)
 
-        return self.inn_kpp_seller
+        return self.inn_kpp
     
     def invoice_extract(self) -> str:
         # Регулярное выражение для извлечения номера Счет-фактуры
@@ -102,10 +102,11 @@ class InnInvoiceDataExtraction:
             self.contract_number = f'№{match[0]} от {match[1]}'
         return self.contract_number
 
-    def data_collect(self, inn_kpp_seller: str, invoice: str, contract_number: str) -> dict | Exception:
-        # print(f'Инн кпп продавца: {inn_kpp_seller}\nНомер счет фактуры: {invoices}')
-        self.data_collection['inn_kpp_seller'] = inn_kpp_seller
+    def data_collect(self, inn_kpp: str, invoice: str, contract_number: str, data_table: list) -> dict | Exception:
+        # print(f'Инн кпп продавца: {inn_kpp}\nНомер счет фактуры: {invoices}')
+        self.data_collection['inn_kpp'] = inn_kpp
         self.data_collection['contract_number'] = contract_number
+        self.data_collection['data_table'] = data_table
         try:
             self.data_collection['invoice'] = invoice
             logger.info('JSON data: %s', self.data_collection)
@@ -122,4 +123,4 @@ class DictToJson:
     @staticmethod
     def write_to_json(collection: dict) -> None:
         with open(file='extracted_results/data.json', mode='w', encoding='utf-8') as file:
-            json.dump(obj=collection, fp=file, ensure_ascii=False, indent=4)
+            json.dump(obj=collection, fp=file, ensure_ascii=False, indent=3)
