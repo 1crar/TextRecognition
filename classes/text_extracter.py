@@ -81,7 +81,8 @@ class InnInvoiceDataExtraction:
     def invoice_extract(self) -> str:
         # Регулярное выражение для извлечения номера Счет-фактуры
         # pattern_invoice_number = re.compile(r'Счет-фактура№(\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
-        pattern_invoice_number = re.compile(r'счет-фактура№(\d+)')
+        # pattern_invoice_number = re.compile(r'Cчет-фактура № ([^ ]+)')   # '\d+'
+        pattern_invoice_number = re.compile(r'счет-фактура№[^\s]+')
         result = re.search(pattern_invoice_number, self._text.replace(' ', '').lower())
         try:
             self.invoice = result.group(0)
@@ -93,9 +94,11 @@ class InnInvoiceDataExtraction:
 
     def contract_extract(self) -> str:
         matches = re.findall(r'Договор №(\w+)\s+от\s+([\d.]+)', self._text)
-        logger.info('Совпадение контрактов\n%s', matches)
+        new_matches = re.findall(r'Основание|Основания передачи (сдачи) / получения (приемки) \W+\d+|\S+',
+                                 self._text)
+        logger.info('Совпадение контрактов\n%s', new_matches)
 
-        for match in matches:
+        for match in new_matches:
             self.contract_number = f'№{match[0]} от {match[1]}'
         return self.contract_number
 
@@ -104,7 +107,7 @@ class InnInvoiceDataExtraction:
         self.data_collection['inn_kpp_seller'] = inn_kpp_seller
         self.data_collection['contract_number'] = contract_number
         try:
-            self.data_collection['invoice'] = invoice[13:]
+            self.data_collection['invoice'] = invoice
             logger.info('JSON data: %s', self.data_collection)
             return self.data_collection
         except IndexError as e:
