@@ -55,10 +55,11 @@ if __name__ == '__main__':
         # Re extraction (inn/kpp and invoice) to json
         pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
                             pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
+        # Извлекаем текст из pdf
         text = pdf.extract_text_from_pdf()
 
         my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
-        logger.info('Извлеченный текст документа:\n\n%s\n', my_regulars.text.replace(' ', '').lower())
+        logger.info('Извлеченный текст документа:\n\n%s\n', my_regulars.text)
 
         inn_kpp: str = my_regulars.inn_and_kpp_extract()
         invoice: str = my_regulars.invoice_extract()

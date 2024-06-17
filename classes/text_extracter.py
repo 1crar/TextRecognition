@@ -67,8 +67,9 @@ class InnInvoiceDataExtraction:
         return self._text
 
     def inn_and_kpp_extract(self) -> str:
-        pattern_inn_kpp = r'\d{10}/\d{9}'
-        result = re.search(pattern_inn_kpp, self._text.replace(' ', '').lower(), re.DOTALL)
+        # pattern_inn_kpp = r'\d{10}/\d{9}'
+        pattern_inn_kpp = r'\d{12}|(\d{10}(?:\/\d{9})?)'
+        result = re.search(pattern_inn_kpp, self._text.replace(' ', '').lower())
         try:
             self.inn_kpp = result.group(0)
         except AttributeError as e:
