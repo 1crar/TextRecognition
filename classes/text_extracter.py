@@ -106,7 +106,7 @@ class InnInvoiceDataExtraction:
     def data_collect(self, inn_kpp: str, invoice: str, contract_number: str, data_table: list) -> dict | Exception:
         # print(f'Инн кпп продавца: {inn_kpp}\nНомер счет фактуры: {invoices}')
         self.data_collection['inn_kpp'] = inn_kpp
-        self.data_collection['contract_number'] = contract_number
+        # self.data_collection['contract_number'] = contract_number
         self.data_collection['data_table'] = data_table
         try:
             self.data_collection['invoice'] = invoice

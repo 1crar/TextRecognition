@@ -53,15 +53,6 @@ data['total'] = num
 DictToJson.write_to_json(collection=data)
 
 
-# checker: str = ''
-# for i in range(len(result)):
-#     for el in result[i]:
-#         checker += el
-#     if len(checker) == 0:
-#         result.pop(i)
-#
-# print(result)
-
 """
 наименование услуг ( табличная часть), количество, цена, налоговая ставка, сумма налога,стоимость работ или услуг,
 а так же итоговую сумму налога и итоговую стоимость товаров(работ, услуг).
