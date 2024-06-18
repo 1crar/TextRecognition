@@ -45,7 +45,8 @@ if __name__ == '__main__':
         """
         # Camelot extraction (from pdf(dataTable) to csv)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
-                                      pdf_file='УПД № 70385 от 2024-05-27.pdf')
+                                      pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
+        # Считываем таблицы с помощью камелота
         tables = camelot_instance.read_tables()
         # Нас интересует только первая таблица (данные по товарам, camelot выделяет первым эту часть данных)
         table: list = tables[0].data
