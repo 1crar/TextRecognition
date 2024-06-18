@@ -47,7 +47,7 @@ class DataCleaning:
         # Очищаем от пустых значений
         final_result = [el for el in result if sum(map(len, el)) > 0]
         logger.info('Финальная очитка (почти): \n%s', final_result)
-        return cleaned_table
+        return final_result
 
 
 class DataCollection:
