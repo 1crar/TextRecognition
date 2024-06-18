@@ -2,6 +2,26 @@ import json
 from logging import getLogger
 
 logger = getLogger(__name__)
+NEEDLE_COLUMNS = ('Наименование товара (описание выполненных работ, оказанных услуг), имущественного права',
+                  'Количество (объем)',
+                  'Цена (тариф) за единицу измерения',
+                  'Стоимость товаров (работ, услуг), имущественных прав без налога всего',
+                  'Налоговая ставка',
+                  'Стоимость товаров (работ, услуг), имущественных прав с налогом всего')
+
+
+class DataCleaning:
+    @staticmethod
+    def data_clean(data_table: list) -> list:
+        logger.info('Данные до очистки: \n%s', data_table)
+        # Удаляем последнюю строку (Всегда информационный мусор), а также первую (которая не входит в табличную часть)
+        cleaned_table = data_table[1:len(data_table)-1]
+        logger.info('Очистка - стадия 1: \n%s', cleaned_table)
+        # Очищаем таблицу от лишних отступов и переходов
+        cleaned_table_2 = [[item.replace('\n', ' ').replace('/ ', '/').replace('- ', '').replace(' /', '/').
+                            replace(',', ', ').replace('  ', ' ') for item in sublist] for sublist in cleaned_table]
+        logger.info('Очистка - стадия 2: \n%s', cleaned_table_2)
+        return cleaned_table
 
 
 class DataCollection:

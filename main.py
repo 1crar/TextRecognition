@@ -5,6 +5,7 @@ import logging
 from dotenv import load_dotenv
 from log_config.log_config import activate_logging
 
+from classes.data_json import DataCollection, DataCleaning
 from classes.pdf import PdfAnalyzer, PdfTabula, PdfCamelot, PdfTextReader, extract_tables
 from classes.img import ImageDataExtracter, tesseract_languages
 from classes.text_extracter import InnInvoiceDataExtraction, DictToJson
@@ -44,11 +45,13 @@ if __name__ == '__main__':
         """
         # Camelot extraction (from pdf(dataTable) to csv)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
-                                      pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
+                                      pdf_file='УПД № 70385 от 2024-05-27.pdf')
         tables = camelot_instance.read_tables()
+        # Нас интересует только первая таблица (данные по товарам, camelot выделяет первым эту часть данных)
         table: list = tables[0].data
-        
-        logger.info("Таблица 1 \n%s\nТип данных таблицы --- %s", tables[0].data, type(tables[0].data))
+        # Затем импортируем класс DataCleaning для очистки и работы с извлеченной таблицей
+        cleaned_table: list = DataCleaning.data_clean(data_table=table)
+        print(cleaned_table)
 
         camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
 
@@ -65,8 +68,9 @@ if __name__ == '__main__':
         invoice: str = my_regulars.invoice_extract()
         contract_number: str = my_regulars.contract_extract()
 
+        # Должно идти только после очистки таблицы данных
         data = my_regulars.data_collect(inn_kpp=inn_kpp, invoice=invoice, contract_number=contract_number,
-                                        data_table=table[:len(table)-1])
+                                        data_table=table)
         logger.info('Хэш-таблица версия 1 (до очистки): \n%s', data)
 
         if type(data) == dict:
