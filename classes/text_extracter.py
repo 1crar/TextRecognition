@@ -67,16 +67,13 @@ class InnInvoiceDataExtraction:
         return self._text
 
     def inn_and_kpp_extract(self) -> str:
-        # pattern_inn_kpp = r'\d{10}/\d{9}'
         pattern_inn_kpp = r'\d{12}|(\d{10}(?:\/\d{9})?)'
         result = re.search(pattern_inn_kpp, self._text.replace(' ', '').lower())
         try:
             self.inn_kpp = result.group(0)
         except AttributeError as e:
             logger.error('Ошибка в атрибуте self.inn_kpp: %s', e)
-
         logger.info("ИНН/КПП %s", self.inn_kpp)
-
         return self.inn_kpp
     
     def invoice_extract(self) -> str:
@@ -94,17 +91,16 @@ class InnInvoiceDataExtraction:
         return self.invoice
 
     def contract_extract(self) -> str:
-        matches = re.findall(r'Договор №(\w+)\s+от\s+([\d.]+)', self._text)
-        new_matches = re.findall(r'Основание|Основания передачи (сдачи) / получения (приемки) \W+\d+|\S+',
-                                 self._text)
-        logger.info('Совпадение контрактов\n%s', new_matches)
+        # matches = re.findall(r'Договор №(\w+)\s+от\s+([\d.]+)', self._text)
+        matches = re.findall(r'Основание|Основания передачи (сдачи) / получения (приемки) \W+\d+|\S+',
+                             self._text)
+        logger.info('Совпадение контрактов\n%s', matches)
 
-        for match in new_matches:
+        for match in matches:
             self.contract_number = f'№{match[0]} от {match[1]}'
         return self.contract_number
 
     def data_collect(self, inn_kpp: str, invoice: str, contract_number: str, data_table: list) -> dict | Exception:
-        # print(f'Инн кпп продавца: {inn_kpp}\nНомер счет фактуры: {invoices}')
         self.data_collection['inn_kpp'] = inn_kpp
         # self.data_collection['contract_number'] = contract_number
         self.data_collection['data_table'] = data_table
