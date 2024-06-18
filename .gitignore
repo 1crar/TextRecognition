@@ -31,6 +31,3 @@ regular_testing.py
 
 # results
 result.txt
-
-# working with dt by pandas, numpy etc
-dt_testing.py

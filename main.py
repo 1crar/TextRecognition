@@ -67,6 +67,7 @@ if __name__ == '__main__':
 
         data = my_regulars.data_collect(inn_kpp=inn_kpp, invoice=invoice, contract_number=contract_number,
                                         data_table=table[:len(table)-1])
+        logger.info('Хэш-таблица версия 1 (до очистки): \n%s', data)
 
         if type(data) == dict:
             DictToJson.write_to_json(collection=data)
