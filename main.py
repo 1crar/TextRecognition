@@ -5,10 +5,10 @@ import logging
 from dotenv import load_dotenv
 from log_config.log_config import activate_logging
 
-from classes.data_json import DataCollection, DataCleaning
+from classes.data_json import DataCollection, DataCleaning, DictToJson
 from classes.pdf import PdfAnalyzer, PdfTabula, PdfCamelot, PdfTextReader, extract_tables
 from classes.img import ImageDataExtracter, tesseract_languages
-from classes.text_extracter import InnInvoiceDataExtraction, DictToJson
+from classes.text_extracter import InnInvoiceDataExtraction
 
 # Загружаем переменные из файла .env
 load_dotenv()
@@ -40,10 +40,7 @@ if __name__ == '__main__':
     else:
         start = time.time()
         activate_logging()
-        """
-        ИНН Исполнителя, КПП Исполнителя, Номер акта / упд / сф, договор
-        """
-        # Camelot extraction (from pdf(dataTable) to csv)
+        # Создаем экземпляр класса на основе либы камелот (для извлечения табличной части из pdf)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
                                       pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
         # Считываем таблицы с помощью камелота
@@ -52,30 +49,30 @@ if __name__ == '__main__':
         table: list = tables[0].data
         # Затем импортируем класс DataCleaning для очистки и работы с извлеченной таблицей
         cleaned_table: list = DataCleaning.data_clean(data_table=table)
-        print(cleaned_table)
+        logger.info('Очистка таблицы данных: \n%s', cleaned_table)
 
-        camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
+        # camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
 
-        # Re extraction (inn/kpp and invoice) to json
+        # Далее извлекаем текст из pdf (без учета структуры) для извлечения данных вне табличной части
+        # (ИНН/КПП, Счет-фактура)
         pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
-                            pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
-        # Извлекаем текст из pdf
+                            pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
+        # Создаем экземпляр класса
         text = pdf.extract_text_from_pdf()
-
+        # Извлекаем текст из pdf
         my_regulars: 'InnInvoiceDataExtraction' = InnInvoiceDataExtraction(text=text)
         logger.info('Извлеченный текст документа:\n\n%s\n', my_regulars.text)
-
+        # Извлекаем остальные данные (ИНН/КПП, Счет-фактура, Итоговая сумма)
         inn_kpp: str = my_regulars.inn_and_kpp_extract()
         invoice: str = my_regulars.invoice_extract()
-        contract_number: str = my_regulars.contract_extract()
+        total: str = my_regulars.total_sum_extract(data_table=cleaned_table)
+        # contract_number: str = my_regulars.contract_extract()
 
-        # Должно идти только после очистки таблицы данных
-        data = my_regulars.data_collect(inn_kpp=inn_kpp, invoice=invoice, contract_number=contract_number,
-                                        data_table=table)
-        logger.info('Хэш-таблица версия 1 (до очистки): \n%s', data)
-
-        if type(data) == dict:
-            DictToJson.write_to_json(collection=data)
+        # Формируем хэш-таблицу на основе полученных данных
+        data = DataCollection()
+        collection = data.data_collect(inn_kpp=inn_kpp, invoice=invoice, cleaned_data=cleaned_table, total=total)
+        if type(collection) == dict:
+            # Записываем итоговую хэш-таблицу в json файл
+            DictToJson.write_to_json(collection=collection)
         logger.info('---------------Execution time: %s---------------', f'{(time.time() - start):.2f} seconds')
 
-        # print(data, '---------------Execution time---------------', f'{(time.time() - start):.2f} seconds', sep='\n')

@@ -52,18 +52,19 @@ class DataCleaning:
 
 class DataCollection:
     """
-    Класс для преобразования (записи) извлеченных данных из pdf в коллекцию (хэш-таблицу)
+    Класс для преобразования (записи) извлеченных и преобразованных данных из pdf в коллекцию (хэш-таблицу)
     """
     def __init__(self):
         self.data: dict = {}
 
-    def data_collect(self, inn_kpp: str, invoice: str, data_table: str, total: str) -> dict | Exception:
+    def data_collect(self, inn_kpp: str, invoice: str, cleaned_data: list, total: str) -> dict | Exception:
         try:
             self.data['inn_kpp'] = inn_kpp
             logger.info('Записали ИНН/КПП: %s', self.data)
             self.data['invoice'] = invoice
             logger.info('Записали счет-фактуру: %s', self.data)
-            self.data['data_table'] = data_table
+            # Убираем последнюю строку, так как эта строка с суммой
+            self.data['data_table'] = cleaned_data[:len(cleaned_data)-1]
             logger.info('Записали таблицу данных: %s', self.data)
             self.data['total'] = total
             logger.info('JSON\'s data (все записано, но до очистки): %s', self.data)
