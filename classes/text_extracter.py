@@ -60,6 +60,7 @@ class InnInvoiceDataExtraction:
         self.inn_kpp: str = ''
         self.invoice: str = ''
         self.contract_number: str = ''
+        self.total_sum: str = ''
         self.data_collection: dict = {}
 
     @property
@@ -100,24 +101,16 @@ class InnInvoiceDataExtraction:
             self.contract_number = f'№{match[0]} от {match[1]}'
         return self.contract_number
 
-    def data_collect(self, inn_kpp: str, invoice: str, contract_number: str, data_table: list) -> dict | Exception:
-        self.data_collection['inn_kpp'] = inn_kpp
-        # self.data_collection['contract_number'] = contract_number
-        self.data_collection['data_table'] = data_table
-        try:
-            self.data_collection['invoice'] = invoice
-            logger.info('JSON data: %s', self.data_collection)
-            return self.data_collection
-        except IndexError as e:
-            logger.error('Ошибка - %s', e)
-            return e
-
-
-class DictToJson:
-    """
-    Класс для записи хэш-таблицы в json файл
-    """
-    @staticmethod
-    def write_to_json(collection: dict) -> None:
-        with open(file='extracted_results/data.json', mode='w', encoding='utf-8') as file:
-            json.dump(obj=collection, fp=file, ensure_ascii=False, indent=3)
+    def total_sum_extract(self, data_table: list) -> str:
+        # Берем последнюю строку таблицы (это строка с суммой)
+        total_sum_list: list = data_table[len(data_table)-1]
+        nums: list = []
+        # Затем работаем по ней
+        for el in reversed(total_sum_list):
+            # Убираем возможные точки/запятые, пробелы (т.к. формат в основном 2 191.99)
+            cleaned_el = el.replace(' ', '').replace('.', '').replace(',', '')
+            if cleaned_el.isdigit():
+                nums.append(el)
+        # Присваиваем первый элемент nums (это итоговая сумма)
+        self.total_sum = nums[0]
+        return self.total_sum
