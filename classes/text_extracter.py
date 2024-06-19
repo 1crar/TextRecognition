@@ -101,16 +101,19 @@ class InnInvoiceDataExtraction:
             self.contract_number = f'№{match[0]} от {match[1]}'
         return self.contract_number
 
-    def total_sum_extract(self, data_table: list) -> str:
+    def total_sum_extract(self, data_table: list) -> str | Exception:
         # Берем последнюю строку таблицы (это строка с суммой)
-        total_sum_list: list = data_table[len(data_table)-1]
-        nums: list = []
-        # Затем работаем по ней
-        for el in reversed(total_sum_list):
-            # Убираем возможные точки/запятые, пробелы (т.к. формат в основном 2 191.99)
-            cleaned_el = el.replace(' ', '').replace('.', '').replace(',', '')
-            if cleaned_el.isdigit():
-                nums.append(el)
-        # Присваиваем первый элемент nums (это итоговая сумма)
-        self.total_sum = nums[0]
-        return self.total_sum
+        try:
+            total_sum_list: list = data_table[len(data_table)-1]
+            nums: list = []
+            # Затем работаем по ней
+            for el in reversed(total_sum_list):
+                # Убираем возможные точки/запятые, пробелы (т.к. формат в основном 2 191.99)
+                cleaned_el = el.replace(' ', '').replace('.', '').replace(',', '')
+                if cleaned_el.isdigit():
+                    nums.append(el)
+            # Присваиваем первый элемент nums (это итоговая сумма)
+            self.total_sum = nums[0]
+            return self.total_sum
+        except IndexError as e:
+            logger.error('Ошибка следующего тип (скорее всего, data_table пустой): %s', e)
