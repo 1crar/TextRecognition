@@ -65,7 +65,7 @@ class PdfTabula(PdfAnalyzer):
     def __init__(self, path_dir: str, pdf_file: str):
         super().__init__(path_dir, pdf_file)
 
-    def read_pdf(self) -> list:
+    def read_tables(self) -> list:
         file_path: str = self._full_path
         # Используйте функцию read_pdf для извлечения таблиц из PDF
         tables = tabula.read_pdf(file_path, pages='all', multiple_tables=True)
@@ -131,6 +131,16 @@ class PdfTextReader(PdfAnalyzer):
                 page = pdf_reader.getPage(page_num)
                 text += page.extract_text()
         return text
+
+
+def dt_frame_to_list(table_frame) -> list:
+    table_lists = []
+
+    for table in table_frame:
+        table_list = table.values.tolist()
+        table_lists.append(table_list)
+
+    return table_lists
 
 
 

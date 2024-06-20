@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from log_config.log_config import activate_logging
 
 from classes.data_json import DataCollection, DataCleaning, DictToJson
-from classes.pdf import PdfAnalyzer, PdfTabula, PdfCamelot, PdfTextReader, extract_tables
+from classes.pdf import PdfAnalyzer, PdfTabula, PdfCamelot, PdfTextReader, extract_tables, dt_frame_to_list
 from classes.img import ImageDataExtracter, tesseract_languages
 from classes.text_extracter import InnInvoiceDataExtraction
 
@@ -41,14 +41,25 @@ if __name__ == '__main__':
         start = time.time()
         activate_logging()
         # Создаем экземпляр класса на основе либы камелот (для извлечения табличной части из pdf)
-        camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
-                                      pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
+        # camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
+        #                               pdf_file='combinepdf.pdf')
+        tabula_instance = PdfTabula(path_dir='extract_assets/input_files/upds_and_invoices',
+                                    pdf_file='Счет-фактура и УПД 29.05.24 № 36989907 = 2 873.59 в т.ч. НДС 478.94.pdf')
         # Считываем таблицы с помощью камелота
-        tables = camelot_instance.read_tables()
+        # tables = camelot_instance.read_tables()
+        # Считываем таблицы с помощью tabula
+        tables = tabula_instance.read_tables()
         # Нас интересует только первая таблица (данные по товарам, camelot выделяет первым эту часть данных)
-        table: list = tables[0].data
+        # В теории, тут должен быть цикл обработки таблицы для каждой страницы (особенно важно для многостраничных pdf)
+        # Получаем кол-во таблиц для обработки
+        # table_numbers = tables.n
+        # Преобразовываем dataframes в lists для дальнейшей обработки
+        table_lists = dt_frame_to_list(table_frame=tables)
+        logger.info("До преобразования: \n%s", tables)
+        logger.info("После преобразования: \n%s", table_lists)
+        # table: list = tables[0].data
         # Затем импортируем класс DataCleaning для очистки и работы с извлеченной таблицей
-        cleaned_table: list = DataCleaning.data_clean(data_table=table)
+        cleaned_table: list = DataCleaning.data_clean(data_table=table_lists)
         logger.info('Очистка таблицы данных: \n%s', cleaned_table)
 
         # camelot_instance.write_to_csv(tables=tables, file_csv_name='Camelot_result.csv')
@@ -56,7 +67,7 @@ if __name__ == '__main__':
         # Далее извлекаем текст из pdf (без учета структуры) для извлечения данных вне табличной части
         # (ИНН/КПП, Счет-фактура)
         pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
-                            pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
+                            pdf_file='combinepdf.pdf')
         # Создаем экземпляр класса
         text = pdf.extract_text_from_pdf()
         # Извлекаем текст из pdf
