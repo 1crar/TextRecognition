@@ -97,7 +97,9 @@ class PdfCamelot(PdfAnalyzer):
         tables = camelot.read_pdf(
             filepath=self._full_path,
             pages='all',
-            line_scale=40)
+            line_scale=40,
+            joint_tol=3
+        )
         return tables
 
     @staticmethod

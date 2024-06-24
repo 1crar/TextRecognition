@@ -44,7 +44,6 @@ if __name__ == '__main__':
         # Создаем экземпляр класса на основе либы камелот (для извлечения табличной части из pdf)
         camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
                                       pdf_file='Универсальный передаточный документ (УПД) с факсимилье № ЦБ-460 от 31.05.2024.pdf')
-
         # Считываем таблицы с помощью камелота
         tables = camelot_instance.read_tables()
         # Получаем кол-во таблиц для обработки
@@ -58,11 +57,10 @@ if __name__ == '__main__':
                 table += tables[i].data
         # Затем импортируем класс DataCleaning для очистки и работы с извлеченной таблицей
         cleaned_table: list = DataCleaning.data_clean(data_table=table)
-        logger.info('Очистка таблицы данных: \n%s', cleaned_table)
         # Далее извлекаем текст из pdf (без учета структуры) для извлечения данных вне табличной части
         # (ИНН/КПП, Счет-фактура)
         pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
-                            pdf_file='Передаточный документ 31.05.24 № 54503 = 2 191.99 без НДС.pdf')
+                            pdf_file='Универсальный передаточный документ (УПД) с факсимилье № ЦБ-460 от 31.05.2024.pdf')
         # Создаем экземпляр класса текст
         text = pdf.extract_text_from_pdf()
         # Извлекаем текст из pdf
