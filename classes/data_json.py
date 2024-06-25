@@ -24,7 +24,7 @@ class DataCleaning:
         # cleaned_table = data_table[1:len(data_table)-1]
         # logger.info('Очистка - стадия 1: \n%s', cleaned_table)
         # Очищаем таблицу от лишних отступов и переходов
-        cleaned_table = [[item.replace('\n', ' ').replace(' /', '/').replace('- ', '').replace('/ ', '/').
+        cleaned_table = [[item.replace('\n', ' ').replace('--', '').replace(' /', '/').replace('- ', '').replace('/ ', '/').
                           replace(',', ', ').replace('  ', ' ') for item in sublist] for sublist in data_table]
         logger.info('Очистка - стадия 1: \n%s', cleaned_table)
         # Убираем начальное n-ое количество строк, которое не является частью таблицы
