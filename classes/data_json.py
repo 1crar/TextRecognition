@@ -9,6 +9,7 @@ NEEDLE_COLUMNS = ('Наименование товара (описание вы�
                   'Цена (тариф) за единицу измерения',
                   'Стоимость товаров (работ, услуг), имущественных прав без налога всего',
                   'Налоговая ставка',
+                  'Сумма налога, предъявляемая покупателю',
                   'Стоимость товаров (работ, услуг), имущественных прав с налогом всего')
 
 
@@ -19,12 +20,8 @@ class DataCleaning:
     @staticmethod
     def data_clean(data_table: list) -> list:
         logger.info('Данные до очистки: \n%s', data_table)
-        # Удаляем последнюю строку (Всегда информационный мусор), а также первую (которая не входит в табличную часть)
-        # НУЖНО ФИКСИТЬ!!!
-        # cleaned_table = data_table[1:len(data_table)-1]
-        # logger.info('Очистка - стадия 1: \n%s', cleaned_table)
         # Очищаем таблицу от лишних отступов и переходов
-        cleaned_table = [[item.replace('\n', ' ').replace(' /', '/').replace('- ', '').replace('/ ', '/').
+        cleaned_table = [[item.replace('\n', ' ').replace('--', '').replace(' /', '/').replace('- ', '').replace('/ ', '/').
                           replace(',', ', ').replace('  ', ' ') for item in sublist] for sublist in data_table]
         logger.info('Очистка - стадия 1: \n%s', cleaned_table)
         # Убираем начальное n-ое количество строк, которое не является частью таблицы
@@ -39,21 +36,35 @@ class DataCleaning:
         logger.info("создали компаратор для сравнения названия столбцов \n%s", comparator_columns)
         # Создаем список индексов, туда будем добавлять индексы нужных колонок (которые совпали с компаратором)
         indexes: list[int] = []
+        # Создаем список названия колонок для сравнения с компаратором
+        column_names: list = cleaned_table_3[0]
         # Начинаем сравнивать
-        for lst in cleaned_table_3:
-            for i in range(len(lst)):
-                el = lst[i].replace('-', '').replace('–', '').replace(' ', '').lower()
-                # Строку сверху я буду потом дорабатывать
-                if el in comparator_columns:
-                    indexes.append(i)
+        for i, name in enumerate(column_names):
+            el = name.replace('-', '').replace('–', '').replace(' ', '').lower()
+            if el in comparator_columns:
+                indexes.append(i)
 
-        logger.info("Номера индексов: %s\nКол-во индексов (должно быть 6): %s", indexes, len(indexes))
+        logger.info("Номера индексов: %s\nКол-во индексов (должно быть 7): %s", indexes, len(indexes))
         # На основе полученных индексов, убираем ненужные столбцы
         result = [[sublist[i] for i in indexes] for sublist in cleaned_table_3]
         logger.info('Очистка - стадия 4: \n%s', result)
         # Очищаем от пустых значений
-        final_result = [el for el in result if sum(map(len, el)) > 0]
-        logger.info('Финальная очитка (почти): \n%s', final_result)
+        pre_final_result = [el for el in result if sum(map(len, el)) > 0]
+        # Очищаем от дубликатов (дублирующих строк, такие могут быть)
+        final_result: list = []
+        for lst in pre_final_result:
+            if lst not in final_result:
+                final_result.append(lst)
+
+        # Очищаем от возможной следующей строки (списка): ['1а', '3', '4', '5', '7', '9']
+        garbage_row = ['1а', '3', '4', '5', '7', '9']
+        # Так как 1а определяется в каждой табличной части УПД файлов, то делаем следующее
+        garbage_detecter: str = garbage_row[0]
+        for i, lst in enumerate(final_result):
+            if garbage_detecter in lst:
+                final_result.pop(i)
+        # Выводим очищенный список (табличную часть)
+        logger.info('Финальная очитка: \n%s', final_result)
         return final_result
 
 
@@ -64,17 +75,19 @@ class DataCollection:
     def __init__(self):
         self.data: dict = {}
 
-    def data_collect(self, inn_kpp: str, invoice: str, cleaned_data: list, total: str) -> dict | Exception:
+    def data_collect(self, inn_kpp: str, invoice: str, cleaned_data: list, totals: tuple) -> dict | Exception:
         try:
             self.data['inn_kpp'] = inn_kpp
             logger.info('Записали ИНН/КПП: %s', self.data)
             self.data['invoice'] = invoice
             logger.info('Записали счет-фактуру: %s', self.data)
-            # Убираем последнюю строку, так как эта строка с суммой
+            # Убираем последнюю строку, так как эта строка с суммой (сумма с налогом/без налога, сумма налога)
             self.data['data_table'] = cleaned_data[:len(cleaned_data)-1]
             logger.info('Записали таблицу данных: %s', self.data)
-            self.data['total'] = total
-            logger.info('JSON\'s data (все записано, но до очистки): %s', self.data)
+            self.data['total_without_tax'] = totals[0]
+            self.data['amount_of_tax'] = totals[1]
+            self.data['total_amount'] = totals[2]
+            logger.info('JSON\'s data (все записано): %s', self.data)
             return self.data
         except IndexError as e:
             logger.error('Ошибка - %s', e)

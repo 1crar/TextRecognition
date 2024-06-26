@@ -1,6 +1,7 @@
 import csv
 # Для считывания PDF
 import PyPDF2
+
 # Для анализа PDF-макета и извлечения текста
 from pdfminer.high_level import extract_pages, extract_text
 from pdfminer.layout import LTTextContainer, LTChar, LTRect, LTFigure
@@ -12,8 +13,6 @@ import tabula
 # Для класса PdfCamelot
 import pandas as pd
 import camelot
-# Так импортируется PyMuPDF
-import sys, fitz
 
 
 class PdfAnalyzer:
@@ -28,6 +27,13 @@ class PdfAnalyzer:
     @property
     def full_path(self) -> str:
         return self._full_path
+
+    def get_pages(self) -> int:
+        pdf_file = open(self._full_path, 'rb')
+        pdf_reader = PyPDF2.PdfFileReader(pdf_file)
+        num_pages = pdf_reader.numPages
+        pdf_file.close()
+        return num_pages
 
     def is_contains_data_table(self) -> bool:
         for page_num, page in enumerate(extract_pages(pdf_file=self._full_path)):
@@ -65,7 +71,7 @@ class PdfTabula(PdfAnalyzer):
     def __init__(self, path_dir: str, pdf_file: str):
         super().__init__(path_dir, pdf_file)
 
-    def read_pdf(self) -> list:
+    def read_tables(self) -> list:
         file_path: str = self._full_path
         # Используйте функцию read_pdf для извлечения таблиц из PDF
         tables = tabula.read_pdf(file_path, pages='all', multiple_tables=True)
@@ -81,16 +87,18 @@ class PdfCamelot(PdfAnalyzer):
     # Наследуем метод __init__ из PdfAnalyzer
     def __init__(self, path_dir: str, pdf_file: str):
         super().__init__(path_dir, pdf_file)
+        # self.pages = pages
 
-    def read_tables(self, num_page: str = 'all') -> "camelot.core.TableList":
+    def read_tables(self) -> "camelot.core.TableList":
         """
-
-        :param num_page: Необязательный параметр, all по умолчанию
+        :param num_page: кол-во страниц
         :return: возвращает объект camelot.core.TableList (по сути, список таблиц)
         """
         tables = camelot.read_pdf(
             filepath=self._full_path,
-            pages=num_page)
+            pages='all',
+            line_scale=40
+        )
         return tables
 
     @staticmethod
@@ -131,6 +139,22 @@ class PdfTextReader(PdfAnalyzer):
                 page = pdf_reader.getPage(page_num)
                 text += page.extract_text()
         return text
+
+
+def dt_frame_to_list(table_frame) -> list:
+    table_lists = []
+
+    for table in table_frame:
+        table_list = table.values.tolist()
+
+        # Убираем все NaN значения
+        new_table_list = []
+        for lst in table_list:
+            cleaned_list = list(filter(lambda x: not pd.isna(x), lst))
+            new_table_list.append(cleaned_list)
+        table_lists.append(new_table_list)
+    # Возвращаем очищенный (без NaN) и переформатированный (dataframe -> list) список (из)
+    return table_lists
 
 
 

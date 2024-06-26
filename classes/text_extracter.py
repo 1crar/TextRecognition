@@ -1,66 +1,22 @@
 import re
-import json
 from logging import getLogger
 
 logger = getLogger(__name__)        # __name__ - имя модуля
 
 
-class PatternDataExtraction:
-    def __init__(self, txt: str):
-        self.txt: str = txt
-
-        self.article_numbers: list = []
-        self.quantity_numbers: list = []
-        self.term_delivery_numbers: list = []
-
-        self.data_collection: dict = {}
-
-    def extract_article_number(self) -> list:
-        article_pattern = r"(Z\d{6})"       # Регулярка для извлечения номера артикула
-        result = re.finditer(article_pattern, self.txt)
-
-        for article in result:
-            self.article_numbers.append(article.group(0))
-
-        # self.extracted_data['article_number'] = articles
-        return self.article_numbers
-
-    def extract_quantity(self) -> list:
-        quantity_pattern = r'\d{1,9},\d{2,3} KW'    # Регулярка для извлечения кол-ва (menge)
-        result = re.finditer(quantity_pattern, self.txt, re.DOTALL)
-
-        for quantity in result:
-            self.quantity_numbers.append(quantity.group(0)[:2])
-
-        # self.extracted_data['quantity'] = quantity_values
-        return self.quantity_numbers
-
-    def extract_term_delivery(self) -> list:
-        term_delivery_pattern = r'KW\s+(\d+)'      # Регулярка для извлечения Liefer-Termin
-        result = re.finditer(term_delivery_pattern, self.txt, re.DOTALL)
-
-        for term in result:
-            self.term_delivery_numbers.append(term.group(0)[3:])
-
-        # self.extracted_data['term_delivery'] = term_delivery_values
-        return self.term_delivery_numbers
-
-    def data_collect(self, articles: list, quantities: list, terms_delivery: list) -> dict:
-        self.data_collection['article_number'] = articles
-        self.data_collection['quantity'] = quantities
-        self.data_collection['term_delivery'] = terms_delivery
-
-        return self.data_collection
-
-
-class InnInvoiceDataExtraction:
+class DataExtraction:
+    """
+    Класс, предназначенный для извлечения, структурирования и записи данных из pdf
+    """
     def __init__(self, text: str):
         self._text = text
 
         self.inn_kpp: str = ''
         self.invoice: str = ''
         self.contract_number: str = ''
-        self.total_sum: str = ''
+        self.amount_without_tax: str = ''
+        self.amount_of_tax: str = ''
+        self.total_amount: str = ''
         self.data_collection: dict = {}
 
     @property
@@ -79,8 +35,6 @@ class InnInvoiceDataExtraction:
     
     def invoice_extract(self) -> str:
         # Регулярное выражение для извлечения номера Счет-фактуры
-        # pattern_invoice_number = re.compile(r'Счет-фактура№(\d{7}/\d{4}) от (\d{2}.\d{2}.\d{4})')
-        # pattern_invoice_number = re.compile(r'Cчет-фактура № ([^ ]+)')   # '\d+'
         pattern_invoice_number = re.compile(r'счет-фактура№[^\s]+')
         result = re.search(pattern_invoice_number, self._text.replace(' ', '').lower())
         try:
@@ -101,19 +55,21 @@ class InnInvoiceDataExtraction:
             self.contract_number = f'№{match[0]} от {match[1]}'
         return self.contract_number
 
-    def total_sum_extract(self, data_table: list) -> str | Exception:
+    def total_sum_extract(self, data_table: list) -> tuple[str] | Exception:
         # Берем последнюю строку таблицы (это строка с суммой)
         try:
             total_sum_list: list = data_table[len(data_table)-1]
-            nums: list = []
-            # Затем работаем по ней
-            for el in reversed(total_sum_list):
-                # Убираем возможные точки/запятые, пробелы (т.к. формат в основном 2 191.99)
-                cleaned_el = el.replace(' ', '').replace('.', '').replace(',', '')
-                if cleaned_el.isdigit():
-                    nums.append(el)
-            # Присваиваем первый элемент nums (это итоговая сумма)
-            self.total_sum = nums[0]
-            return self.total_sum
+            cleaned_totals: list = []
+            garbages: tuple = ('', 'Всего к оплате (9)', 'Всего к оплате:', 'Всего к оплате', 'x')
+            # очистка от пустых строк (значений)
+            for el in total_sum_list:
+                if el in garbages:
+                    continue
+                cleaned_totals.append(el)
+            self.total_amount, self.amount_of_tax, self.amount_without_tax = (cleaned_totals[0], cleaned_totals[1],
+                                                                              cleaned_totals[2])
+            # Добавляем значения в кортеж
+            values: tuple = (self.total_amount, self.amount_of_tax, self.amount_without_tax)
+            return values
         except IndexError as e:
             logger.error('Ошибка следующего тип (скорее всего, data_table пустой): %s', e)
