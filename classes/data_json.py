@@ -55,8 +55,16 @@ class DataCleaning:
         for lst in pre_final_result:
             if lst not in final_result:
                 final_result.append(lst)
+
+        # Очищаем от возможной следующей строки (списка): ['1а', '3', '4', '5', '7', '9']
+        garbage_row = ['1а', '3', '4', '5', '7', '9']
+        # Так как 1а определяется в каждой табличной части УПД файлов, то делаем следующее
+        garbage_detecter: str = garbage_row[0]
+        for i, lst in enumerate(final_result):
+            if garbage_detecter in lst:
+                final_result.pop(i)
         # Выводим очищенный список (табличную часть)
-        logger.info('Финальная очитка (почти): \n%s', final_result)
+        logger.info('Финальная очитка: \n%s', final_result)
         return final_result
 
 
@@ -79,7 +87,7 @@ class DataCollection:
             self.data['total_without_tax'] = totals[0]
             self.data['amount_of_tax'] = totals[1]
             self.data['total_amount'] = totals[2]
-            logger.info('JSON\'s data (все записано, но до очистки): %s', self.data)
+            logger.info('JSON\'s data (все записано): %s', self.data)
             return self.data
         except IndexError as e:
             logger.error('Ошибка - %s', e)
