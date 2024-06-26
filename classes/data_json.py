@@ -76,9 +76,9 @@ class DataCollection:
             # Убираем последнюю строку, так как эта строка с суммой (сумма с налогом/без налога, сумма налога)
             self.data['data_table'] = cleaned_data[:len(cleaned_data)-1]
             logger.info('Записали таблицу данных: %s', self.data)
-            self.data['total_without_tax'] = totals[2]
+            self.data['total_without_tax'] = totals[0]
             self.data['amount_of_tax'] = totals[1]
-            self.data['total_amount'] = totals[0]
+            self.data['total_amount'] = totals[2]
             logger.info('JSON\'s data (все записано, но до очистки): %s', self.data)
             return self.data
         except IndexError as e:
