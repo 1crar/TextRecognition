@@ -69,14 +69,15 @@ if __name__ == '__main__':
         # Извлекаем остальные данные (ИНН/КПП, Счет-фактура, Итоговая сумма)
         inn_kpp: str = my_regulars.inn_and_kpp_extract()
         invoice: str = my_regulars.invoice_extract()
-        total: str = my_regulars.total_sum_extract(data_table=cleaned_table)
+        totals: tuple = my_regulars.total_sum_extract(data_table=cleaned_table)
         # contract_number: str = my_regulars.contract_extract()
 
         # Формируем хэш-таблицу на основе полученных данных
         data = DataCollection()
-        collection = data.data_collect(inn_kpp=inn_kpp, invoice=invoice, cleaned_data=cleaned_table, total=total)
+        collection = data.data_collect(inn_kpp=inn_kpp, invoice=invoice, cleaned_data=cleaned_table, totals=totals)
         if type(collection) == dict:
             # Записываем итоговую хэш-таблицу в json файл
             DictToJson.write_to_json(collection=collection)
         logger.info('---------------Execution time: %s---------------', f'{(time.time() - start):.2f} seconds')
 
+    # ['1а', '3', '4', '5', '7', '9']

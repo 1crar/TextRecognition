@@ -60,7 +60,9 @@ class InnInvoiceDataExtraction:
         self.inn_kpp: str = ''
         self.invoice: str = ''
         self.contract_number: str = ''
-        self.total_sum: str = ''
+        self.amount_without_tax: str = ''
+        self.amount_of_tax: str = ''
+        self.total_amount: str = ''
         self.data_collection: dict = {}
 
     @property
@@ -101,7 +103,7 @@ class InnInvoiceDataExtraction:
             self.contract_number = f'№{match[0]} от {match[1]}'
         return self.contract_number
 
-    def total_sum_extract(self, data_table: list) -> str | Exception:
+    def total_sum_extract(self, data_table: list) -> tuple[str] | Exception:
         # Берем последнюю строку таблицы (это строка с суммой)
         try:
             total_sum_list: list = data_table[len(data_table)-1]
@@ -113,7 +115,8 @@ class InnInvoiceDataExtraction:
                 if cleaned_el.isdigit():
                     nums.append(el)
             # Присваиваем первый элемент nums (это итоговая сумма)
-            self.total_sum = nums[0]
-            return self.total_sum
+            self.total_amount, self.amount_of_tax, self.amount_without_tax = nums[0], nums[1], nums[2]
+            values: tuple = (self.total_amount, self.amount_of_tax, self.amount_without_tax)
+            return values
         except IndexError as e:
             logger.error('Ошибка следующего тип (скорее всего, data_table пустой): %s', e)
