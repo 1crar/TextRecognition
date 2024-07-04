@@ -8,10 +8,10 @@ __pycache__/
 
 
 # Assets for extraction
-extract_assets/
+app/pdf_appRecognizer/extract_assets/
 
 # Extraction results
-extracted_results/
+app/pdf_appRecognizer/extracted_results/
 
 
 # env fil
@@ -23,11 +23,11 @@ tesseract_languages.txt
 # status file description
 status.txt
 
-# log data file
-data.log
+# log data file for pdf-recognizer app
+pdf_appRecognizer_data.log
 
 # for testing regulars
-regular_testing.py
-
+app/pdf_appRecognizer/regular_testing.py
+app/uploaded_files
 # results
 result.txt
