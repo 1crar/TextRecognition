@@ -25,7 +25,7 @@ async def upload_file(uploaded_file: UploadFile):
         pdf_writer.add_page(pdf_reader.getPage(page_num))
     # Записываем полученное имя файла
     file_name: str = uploaded_file.filename
-    with open(f'pdf_appRecognizer/extract_assets/uploaded_files/{file_name}', 'wb') as output_pdf:
+    with open(f'uploaded_files/{file_name}', 'wb') as output_pdf:
         pdf_writer.write(output_pdf)
     # Вызываем приложение pdf recognizer
     data: dict = pdf_app(pdf_filename=file_name)
