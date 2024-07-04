@@ -3,11 +3,11 @@ import time
 import logging
 
 from dotenv import load_dotenv
-from log_config.log_config import activate_logging
+from .log_config.log_config import activate_logging
 
-from classes.data_json import DataCollection, DataCleaning, DictToJson
-from classes.pdf import PdfTextReader, PdfCamelot
-from classes.text_extracter import DataExtraction
+from .classes.data_json import DataCollection, DataCleaning
+from .classes.pdf import PdfTextReader, PdfCamelot
+from .classes.text_extracter import DataExtraction
 
 # Загружаем переменные из файла .env
 load_dotenv()
@@ -18,12 +18,12 @@ path_to_tesseract: str = os.getenv('TESSERACT_PATH_DIR')
 tesseract_exe: str = os.getenv('EXECUTION_FILE')
 
 
-if __name__ == '__main__':
+def pdf_app(pdf_filename: str):
     start = time.time()
     activate_logging()
     # Создаем экземпляр класса на основе либы camelot (для извлечения табличной части из pdf)
-    camelot_instance = PdfCamelot(path_dir='extract_assets/input_files/upds_and_invoices',
-                                  pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
+    camelot_instance = PdfCamelot(path_dir='./uploaded_files',
+                                  pdf_file=pdf_filename)
     # Считываем таблицы с помощью камелота
     tables = camelot_instance.read_tables()
     # Получаем кол-во таблиц для обработки
@@ -39,8 +39,8 @@ if __name__ == '__main__':
     cleaned_table: list = DataCleaning.data_clean(data_table=table)
     # Далее извлекаем текст из pdf (без учета структуры) для извлечения данных вне табличной части
     # (ИНН/КПП, Счет-фактура)
-    pdf = PdfTextReader(path_dir='extract_assets/input_files/upds_and_invoices',
-                        pdf_file='УПД 31.05.24 № 428 = 257 428.00 без НДС.pdf')
+    pdf = PdfTextReader(path_dir='./uploaded_files',
+                        pdf_file=pdf_filename)
     # Создаем экземпляр класса текст
     text = pdf.extract_text_from_pdf()
     # Извлекаем текст из pdf
@@ -54,8 +54,7 @@ if __name__ == '__main__':
     # Формируем хэш-таблицу на основе полученных данных
     data = DataCollection()
     collection = data.data_collect(inn_kpp=inn_kpp, invoice=invoice, cleaned_data=cleaned_table, totals=totals)
-    if type(collection) == dict:
-        # Записываем итоговую хэш-таблицу в json файл
-        DictToJson.write_to_json(collection=collection)
     logger.info('---------------Execution time: %s---------------', f'{(time.time() - start):.2f} seconds')
+    return collection
+
 
