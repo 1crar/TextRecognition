@@ -20,7 +20,7 @@ LOGGING = {
             "class": "logging.FileHandler",
             "level": "INFO",
             "formatter": "simple",
-            "filename": "data.log",
+            "filename": "pdf_appRecognizer_data.log",
             "encoding": "utf-8",
             "mode": "w"
         }
