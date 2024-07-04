@@ -23,11 +23,7 @@ tesseract_languages.txt
 # status file description
 status.txt
 
-<<<<<<< HEAD
 # log data file for pdf-recognizer app
-=======
-# log data file for pdf-recognizer app
->>>>>>> develop
 pdf_appRecognizer_data.log
 
 # for testing regulars
