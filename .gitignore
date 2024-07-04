@@ -24,7 +24,7 @@ tesseract_languages.txt
 status.txt
 
 # log data file
-data.log
+pdf_appRecognizer_data.log
 
 # for testing regulars
 regular_testing.py
