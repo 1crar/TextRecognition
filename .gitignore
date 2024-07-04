@@ -8,10 +8,10 @@ __pycache__/
 
 
 # Assets for extraction
-extract_assets/
+pdf_appRecognizer/extract_assets/
 
 # Extraction results
-extracted_results/
+pdf_appRecognizer/extracted_results/
 
 
 # env fil
@@ -27,7 +27,7 @@ status.txt
 data.log
 
 # for testing regulars
-regular_testing.py
+pdf_appRecognizer/regular_testing.py
 
 # results
 result.txt
