@@ -4,7 +4,7 @@ from logging import getLogger
 logger = getLogger(__name__)        # __name__ - имя модуля
 
 
-class DataExtraction:
+class DataExtractionPDF:
     """
     Класс, предназначенный для извлечения, структурирования и записи данных из pdf
     """
@@ -73,3 +73,45 @@ class DataExtraction:
             return values
         except IndexError as e:
             logger.error('Ошибка следующего тип (скорее всего, data_table пустой): %s', e)
+
+
+class DataExtractionImage:
+    def __init__(self, text: str):
+        self._text = text
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+    def seller_extract(self) -> str | Exception:
+        pattern_seller = r'Продавец:\s*(\d+\s*"[^"]*"\s*)'
+        result = re.search(pattern_seller, self._text)
+        try:
+            pattern_seller = result.group(0)
+            logger.info("Продавец %s", pattern_seller)
+            return pattern_seller
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте pattern_seller: %s', e)
+            return e
+
+    def invoice_extract(self) -> str | Exception:
+        pattern_invoice = r'Счет-фактура №\s*(\d+)'
+        result = re.search(pattern_invoice, self._text)
+        try:
+            pattern_seller = result.group(1)
+            logger.info("Продавец %s", pattern_seller)
+            return pattern_seller
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте pattern_seller: %s', e)
+            return e
+
+    def inn_and_kpp_extract(self) -> str | Exception:
+        pattern_inn_kpp = r'\d{12}|(\d{10}(?:\/\d{9})?)'
+        result = re.search(pattern_inn_kpp, self._text.replace(' ', '').lower())
+        try:
+            inn_kpp = result.group(0)
+            logger.info("ИНН/КПП %s", inn_kpp)
+            return inn_kpp
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте self.inn_kpp: %s', e)
+            return e
