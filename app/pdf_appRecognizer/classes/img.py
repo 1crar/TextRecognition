@@ -3,6 +3,8 @@ import os
 import pytesseract
 import time
 
+import pandas as pd
+
 from PIL import Image
 
 
@@ -55,6 +57,20 @@ class ImageDataExtracter:
 
         text = pytesseract.image_to_string(thresh, lang=self._language)
         return text
+
+    def tesseract_extraction(self) -> str:
+        img = Image.open(self._full_path)
+
+        pytesseract.pytesseract.tesseract_cmd: str = self._path_to_tesseract
+
+        text = pytesseract.image_to_string(img, lang=self.language)
+
+        data = [line.split() for line in text.splitlines() if line.strip()]
+
+        # df = pd.DataFrame(data)
+        # print(df)
+
+        return text[:-1]
 
 
 # Get the list of available languages
