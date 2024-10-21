@@ -99,8 +99,8 @@ class DictToJson:
     Класс для записи хэш-таблицы в json файл
     """
     @staticmethod
-    def write_to_json(collection: dict) -> None:
-        with open(file='extracted_results/data.json', mode='w', encoding='utf-8') as file:
+    def write_to_json(collection: dict, path_to_save: str) -> None:
+        with open(file=f'{path_to_save}/УПД_1.json', mode='w', encoding='utf-8') as file:
             json.dump(obj=collection, fp=file, ensure_ascii=False, indent=3)
 
 
