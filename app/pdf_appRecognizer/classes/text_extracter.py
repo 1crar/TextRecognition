@@ -84,7 +84,7 @@ class DataExtractionImage:
         return self._text
 
     def seller_extract(self) -> str | Exception:
-        pattern_seller = r'Продавец:\s*(\d+\s*"[^"]*"\s*)'
+        pattern_seller = r'\s*(\d+\s*"[^"]*"\s*)'
         result = re.search(pattern_seller, self._text)
         try:
             pattern_seller = result.group(0)
@@ -114,4 +114,26 @@ class DataExtractionImage:
             return inn_kpp
         except AttributeError as e:
             logger.error('Ошибка в атрибуте self.inn_kpp: %s', e)
+            return e
+
+    def adress_extract(self) -> str | Exception:
+        pattern_adress = r'Адрес:\s*([^()]+)'
+        result = re.search(pattern_adress, self._text)
+        try:
+            adress = result.group(0)
+            logger.info("Адрес:", adress)
+            return adress.replace('Адрес: ', '')
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте adress: %s', e)
+            return e
+
+    def loaded_document_extract(self) -> str | Exception:
+        pattern_loaded_document = r'Документ об отгрузке №п/п \d+-\d+ № \d+ от \d{2}\.\d{2}\.\d{4}г'
+        result = re.search(pattern_loaded_document, self._text)
+        try:
+            loaded_document = result.group(0)
+            logger.info('Дата погрузки: ', '')
+            return loaded_document.replace('Документ об отгрузке ', '')
+        except AttributeError as e:
+            logger.error('Ошибка в атрибуте loaded_date: %s', e)
             return e
