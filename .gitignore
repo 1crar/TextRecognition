@@ -29,5 +29,6 @@ pdf_appRecognizer_data.log
 # for testing regulars
 app/pdf_appRecognizer/regular_testing.py
 app/uploaded_files
+
 # results
 result.txt
