@@ -25,7 +25,7 @@ load_dotenv()
 TESSERACT_OCR: str = os.getenv('TESSERACT')
 
 
-def improve_img_quality(img_path: str, output_path: str, sharpness: int = 10, contrast: float = 0.9, blur: int = 1):
+def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, contrast: float = 1.3, blur: int = 1):
     """
     Функция улучшения качества изображения. Ненамного, ну качество улучшает
     :param img_path: Путь до картинки, которую собираемся улучшать
@@ -47,17 +47,17 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 10, co
     # конвертируем image в PIL Image
     pil_img = Image.fromarray(img)
 
-    # Переде увеличением резкости, увеличим резекость методом SHARPEN класса ImageFilter
-    sharp_image = pil_img.filter(PIL.ImageFilter.SHARPEN)
+    # # Переде увеличением резкости, увеличим резекость методом SHARPEN класса ImageFilter
+    # sharp_image = pil_img.filter(PIL.ImageFilter.SHARPEN)
 
-    # Улучшаем качество границ символов на текущем изображении
-    edge_img = sharp_image.filter(PIL.ImageFilter.EDGE_ENHANCE)
-
-    # Используем метод EDGE_ENHANCE_MORE для еще более существенного улучшения границ символов
-    edge_img_enhanced = edge_img.filter(PIL.ImageFilter.EDGE_ENHANCE_MORE)
+    # # Улучшаем качество границ символов на текущем изображении
+    # edge_img = sharp_image.filter(PIL.ImageFilter.EDGE_ENHANCE)
+    #
+    # # Используем метод EDGE_ENHANCE_MORE для еще более существенного улучшения границ символов
+    # edge_img_enhanced = edge_img.filter(PIL.ImageFilter.EDGE_ENHANCE_MORE)
 
     # Увеличиваем резкость изображения
-    enhancer = ImageEnhance.Sharpness(edge_img_enhanced)
+    enhancer = ImageEnhance.Sharpness(pil_img)
     img_enhanced = enhancer.enhance(sharpness)
 
     # Увеличиваем контрастность
@@ -255,13 +255,14 @@ def image_extracting(image_file: str, image_lang: str):
 
 def test():
 
-    image_extracting(image_file='enhanced_english.png', image_lang='eng')
-    # improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/english.png',
-    #                     output_path='pdf_appRecognizer/extract_assets/image_files/enhanced_english_x4.png')
-    #
+    image_extracting(image_file='YPD_post_upscale_x4.jpg', image_lang='rus')
+
+    # improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/enhanced_YPD_double_post_upscale_x4.jpeg',
+    #                     output_path='pdf_appRecognizer/extract_assets/image_files/double_enhanced_YPD_double_post_upscale_x4.jpeg')
+
     print('---------------------------------------------------------------------\n\n')
-    #
-    image_extracting(image_file='enhanced_english_x4.png', image_lang='eng')
+
+    image_extracting(image_file='double_enhanced_YPD_double_post_upscale_x4.jpeg', image_lang='rus')
 
     # image_file: str = 'pdf_appRecognizer/extract_assets/image_files/enhanced_english_x2.png'
     #
