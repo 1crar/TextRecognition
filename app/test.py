@@ -17,7 +17,7 @@ from pdf_appRecognizer.classes.converter import Converter
 from pdf_appRecognizer.classes.pdf import PdfCamelot, PdfTextReader
 from pdf_appRecognizer.classes.data_json import DataCleaning, DataCollection, DictToJson
 from pdf_appRecognizer.classes.text_extracter import DataExtractionImage, DataExtractionPDF
-from pdf_appRecognizer.classes.img import ImageDataExtracter
+from pdf_appRecognizer.classes.img import ImageDataExtracter, tesseract_languages
 
 
 load_dotenv()
@@ -65,18 +65,17 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 10, co
     img_enhanced.save(output_path)
 
 
-def prep_image_var():
+def prep_image_var(input_img: str, output_img: str):
     """
-    Эта функция выделяет именно табличную часть. Но тестировал тольк для одностраничных УПД
+    Эта функция выделяет именно табличную часть. Но тестировал только для одностраничных УПД
     :return: None
     """
-    img = cv2.imread(r'pdf_appRecognizer/extract_assets/image_files/Test_YPD_2.png')
+    img = cv2.imread(input_img)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+    _, binary = cv2.threshold(img, 150, 255, cv2.THRESH_BINARY_INV)
     # Выделяем контуры для табличной части
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Перебор найденных контуров
     for cnt in contours:
@@ -88,25 +87,36 @@ def prep_image_var():
             mask = np.zeros(gray.shape, dtype=np.uint8)
             cv2.drawContours(mask, [cnt], -1, (255), thickness=cv2.FILLED)
 
-            # Извлечение области таблицы
+            # Записываем новое изображение, где исключительно табличная часть
             table_image = cv2.bitwise_and(img, img, mask=mask)
-            cv2.imwrite('pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2.png', img=table_image)
-
+            cv2.imwrite(output_img, img=table_image)
+            return
+            # Извлечение области таблицы
             table_image_2 = cv2.imread('pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2.png')
             gray_img = cv2.cvtColor(table_image_2, cv2.COLOR_BGR2GRAY)
             cv2.imwrite('pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2_2.png', img=gray_img)
 
 
-def data_write_collection(collection: dict, path: str) -> None:
+def extract_dt_img(img_file: str):
+    image = cv2.imread(filename=img_file)
+
+    config_options = r'--psm 6'
+    data = pytesseract.image_to_string(image=image, config=config_options, lang='rus')
+    return data
+
+
+def data_write_collection(collection: dict, filename: str,
+                          path: str = 'pdf_appRecognizer/extract_assets/json_files') -> None:
     # функция для записи извлеченных значений из изображения в формате .json (НЕ табличная часть)
     """
 
+    :param filename: наименование файла в формате .json
     :param collection: Хэш-таблица/словарь
     :param path: Путь сохранения json файла
     :return:
     """
     try:
-        with open(file=f'{path}/extracted_data.json', mode='w', encoding='utf-8') as json_file:
+        with open(file=f'{path}/{filename}.json', mode='w', encoding='utf-8') as json_file:
             json.dump(obj=collection, fp=json_file, ensure_ascii=False, indent=3)
     except Exception as e:
         raise Exception(e)
@@ -183,12 +193,12 @@ def image_extracting(image_file: str):
     # Создаем экземпляр класса curr_image для работы с ним. Структура таблицы в таком варианте теряется.
     curr_image = ImageDataExtracter(path_dir='pdf_appRecognizer/extract_assets/image_files',
                                     image_file=image_file,
-                                    path_to_tesseract=TESSERACT_OCR, language='rus')
+                                    path_to_tesseract=TESSERACT_OCR, language='chi_tra_vert')
 
     extracted_text = curr_image.tesseract_extraction()
     # Вывод извлеченного текста (без структуры)
     print(extracted_text, '\n\n')
-    # return
+    return
 
     # Далее создаем экземпляр класса text_instance для дальнейшего извлечения полей через регулярки.
     text_instance = DataExtractionImage(text=extracted_text)
@@ -219,11 +229,31 @@ def image_extracting(image_file: str):
 """
 
 
-# prep_image_var()
+# prep_image_var(input_img='pdf_appRecognizer/extract_assets/image_files/Nex_enhanced_YPD_x4.jpg',
+#                output_img='pdf_appRecognizer/extract_assets/image_files/New_enhanced_YPD_x4_table.jpg')
+#
+# dt = extract_dt_img(img_file='pdf_appRecognizer/extract_assets/image_files/New_enhanced_YPD_x4_table.jpg')
+# print(dt)
+
 
 # improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2.png',
 #                     output_path='pdf_appRecognizer/extract_assets/image_files/enhanced_Test_Table_YPD_2.png')
-image_extracting(image_file='enhanced_Test_Table_YPD_2.png')
 
 # table2img(path_to_img='pdf_appRecognizer/extract_assets/image_files/enhanced_Test_Table_YPD_2.png')
 
+
+def test():
+    image_extracting(image_file='chinese.png')
+
+
+    # tess_lang = tesseract_languages(path_to_tesseract=TESSERACT_OCR)
+    #
+    # tess_dict: dict = {
+    #     "lang_list": tess_lang
+    # }
+    # data_write_collection(collection=tess_dict, filename='tesseract_languages')
+    #
+    # print(tess_lang)
+
+
+test()
