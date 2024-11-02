@@ -1,3 +1,4 @@
+import PIL.ImageFilter
 import cv2
 import imutils
 import json
@@ -46,8 +47,17 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 10, co
     # конвертируем image в PIL Image
     pil_img = Image.fromarray(img)
 
+    # Переде увеличением резкости, увеличим резекость методом SHARPEN класса ImageFilter
+    sharp_image = pil_img.filter(PIL.ImageFilter.SHARPEN)
+
+    # Улучшаем качество границ символов на текущем изображении
+    edge_img = sharp_image.filter(PIL.ImageFilter.EDGE_ENHANCE)
+
+    # Используем метод EDGE_ENHANCE_MORE для еще более существенного улучшения границ символов
+    edge_img_enhanced = edge_img.filter(PIL.ImageFilter.EDGE_ENHANCE_MORE)
+
     # Увеличиваем резкость изображения
-    enhancer = ImageEnhance.Sharpness(pil_img)
+    enhancer = ImageEnhance.Sharpness(edge_img_enhanced)
     img_enhanced = enhancer.enhance(sharpness)
 
     # Увеличиваем контрастность
@@ -183,9 +193,10 @@ def test_converted_pdf_for_extracting():
     DictToJson.write_to_json(collection=collection, path_to_save='pdf_appRecognizer/extract_assets/json_files')
 
 
-def image_extracting(image_file: str):
+def image_extracting(image_file: str, image_lang: str):
     """
     Эта функция через регулярки извлекает данные ВНЕ таблицы. Работает по НЕСТРУКТУРИРОВАННОМУ тексту
+    :param image_lang: Язык, который нужно извлечь из картинки
     :param image_file: Путь до файла
     :return: None
     """
@@ -193,7 +204,7 @@ def image_extracting(image_file: str):
     # Создаем экземпляр класса curr_image для работы с ним. Структура таблицы в таком варианте теряется.
     curr_image = ImageDataExtracter(path_dir='pdf_appRecognizer/extract_assets/image_files',
                                     image_file=image_file,
-                                    path_to_tesseract=TESSERACT_OCR, language='chi_tra_vert')
+                                    path_to_tesseract=TESSERACT_OCR, language=image_lang)
 
     extracted_text = curr_image.tesseract_extraction()
     # Вывод извлеченного текста (без структуры)
@@ -243,7 +254,37 @@ def image_extracting(image_file: str):
 
 
 def test():
-    image_extracting(image_file='chinese.png')
+
+    image_extracting(image_file='enhanced_english.png', image_lang='eng')
+    # improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/english.png',
+    #                     output_path='pdf_appRecognizer/extract_assets/image_files/enhanced_english_x4.png')
+    #
+    print('---------------------------------------------------------------------\n\n')
+    #
+    image_extracting(image_file='enhanced_english_x4.png', image_lang='eng')
+
+    # image_file: str = 'pdf_appRecognizer/extract_assets/image_files/enhanced_english_x2.png'
+    #
+    # with Image.open(fp=image_file) as curr_img:
+    #     sharp_img = curr_img.filter(PIL.ImageFilter.SHARPEN)
+    #
+    #     for _ in range(10):
+    #         sharp_img = sharp_img.filter(PIL.ImageFilter.SHARPEN)
+    #
+    #     for _ in range(1):
+    #         sharp_img = curr_img.filter(PIL.ImageFilter.EDGE_ENHANCE)
+    #
+    #     for _ in range(1):
+    #         sharp_img = sharp_img.filter(PIL.ImageFilter.EDGE_ENHANCE_MORE)
+    #
+    #     sharp_img.show()
+
+
+        # for i in range(15):
+        #     edges = sharp_img.filter(PIL.ImageFilter.EDGE_ENHANCE)      # EDGE_ENHANCE
+        # edges.show()
+        # edges.save(fp='pdf_appRecognizer/extract_assets/image_files/edgy_enhanced_english_x3.png')
+
 
 
     # tess_lang = tesseract_languages(path_to_tesseract=TESSERACT_OCR)
