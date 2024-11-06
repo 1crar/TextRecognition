@@ -3,16 +3,19 @@ import cv2
 import imutils
 import json
 import os
+import torch
 
 import pandas as pd
 import pytesseract
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from dotenv import load_dotenv
 from img2table.document import Image
 from pytesseract import Output
 from PIL import Image, ImageEnhance
+from super_image import EdsrModel, ImageLoader
 
 from pdf_appRecognizer.classes.converter import Converter
 from pdf_appRecognizer.classes.pdf import PdfCamelot, PdfTextReader
@@ -23,6 +26,44 @@ from pdf_appRecognizer.classes.img import ImageDataExtracter, tesseract_language
 
 load_dotenv()
 TESSERACT_OCR: str = os.getenv('TESSERACT')
+
+
+def upscale(img_path: str, model: torch.nn.Module):
+    curr_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    torch.cuda.empty_cache()
+
+    model = model.to(curr_device)
+
+    img = np.array(Image.open(img_path), dtype=np.float32) / 255.0
+    img = img[:,:,0:3]
+    tileCountX = 16
+    tileCountY = 16
+    M = img.shape[0] // tileCountX
+    N = img.shape[1] // tileCountY
+    tiles = [[img[x:x+M, y:y+N] for x in range(0, img.shape[0], M)] for y in range(0, img.shape[1], N)]
+    inputs = [[torch.from_numpy(tile).permute(2, 0, 1).unsqueeze(0).to(curr_device) for tile in part] for part in tiles]
+
+    upscaled_img = None
+    count = 0
+
+    for i in range(tileCountY + 1):
+        col = None
+        for j in range(tileCountX + 1):
+            pred = model(inputs[i][j])
+            res = pred.detach().to('cpu').squeeze(0).permute(1, 2, 0)
+            print(f"Image tile #{count}. Upscaled shape: {res.shape}")
+            count += 1
+            col = res if col is None else torch.cat([col, res], dim=0)
+            del pred
+        upscaled_img = col if upscaled_img is None else torch.cat([upscaled_img, col], dim=1)
+
+    f, axarr = plt.subplots(1,2)
+    axarr[0].imshow(upscaled_img)
+    axarr[1].imshow(img)
+
+    plt.show()
+
+    cv2.imwrite(img_path.split('\\')[-1].split('.')[0] + "_4x.png", upscaled_img.numpy() * 255.0)
 
 
 def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, contrast: float = 1.3, blur: int = 1):
@@ -140,7 +181,7 @@ def test_pdf_to_image():
     Converter.from_pdf_to_png(pdf_path='pdf_appRecognizer/extract_assets/pdf_files/УПД.pdf',
                               to_save='pdf_appRecognizer/extract_assets/image_files/УПД')
 
-    Converter.from_png_to_pdf(png_path='pdf_appRecognizer/extract_assets/image_files/УПД_1.png',
+    Converter.from_png_to_pdf(png_path='pdf_appRecognizer/extract_assets/image_files/UPD_1.png',
                               to_save='pdf_appRecognizer/extract_assets/pdf_files/УПД_1.pdf')
 
 
@@ -254,15 +295,16 @@ def image_extracting(image_file: str, image_lang: str):
 
 
 def test():
+    # img_path: str = 'pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2.png'
 
-    image_extracting(image_file='YPD_post_upscale_x4.jpg', image_lang='rus')
+    image_extracting(image_file='Test_Table_YPD_2.png', image_lang='rus')
 
-    # improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/enhanced_YPD_double_post_upscale_x4.jpeg',
-    #                     output_path='pdf_appRecognizer/extract_assets/image_files/double_enhanced_YPD_double_post_upscale_x4.jpeg')
+    # improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2.png',
+    #                     output_path='pdf_appRecognizer/extract_assets/image_files/enhanced_Test_Table_YPD_2.png')
 
     print('---------------------------------------------------------------------\n\n')
 
-    image_extracting(image_file='double_enhanced_YPD_double_post_upscale_x4.jpeg', image_lang='rus')
+    image_extracting(image_file='Test_Table_YPD_2_scale_x4.png', image_lang='rus')
 
     # image_file: str = 'pdf_appRecognizer/extract_assets/image_files/enhanced_english_x2.png'
     #
