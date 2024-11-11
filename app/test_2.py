@@ -72,7 +72,7 @@ from PIL import Image
 
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
+
 
 
 # def upscale(img_path: str, upscaled_img: str, model: torch.nn.Module, block_size: int = 256):
@@ -103,6 +103,7 @@ import matplotlib.pyplot as plt
 #     ImageLoader.save_compare(input=inputs, pred=preds,
 #                              output_file=fr'pdf_appRecognizer/extract_assets/image_files/{upscaled_img.replace(
 #                                  '.png', '')}_compare.png')
+
 
 def upscale(img_path: str, upscaled_img: str, model: torch.nn.Module):
     cur_device = 'cuda' if torch.cuda.is_available() else 'cpu'
