@@ -71,38 +71,9 @@ from super_image import EdsrModel, DrlnModel, ImageLoader
 from PIL import Image
 
 import torch
+import easyocr
+import json
 import numpy as np
-
-
-
-# def upscale(img_path: str, upscaled_img: str, model: torch.nn.Module, block_size: int = 256):
-#     # В качестве девайса используем видеокарту
-#     cur_device = 'cuda' if torch.cuda.is_available() else 'cpu'
-#     torch.cuda.empty_cache()
-#
-#     model = model.to(cur_device)
-#
-#     img = Image.open(fp=img_path)
-#     img = img.convert('RGB')
-#
-#     width, height = img.size
-#
-#     # Создаем пустое изображение для сохранения результатов
-#     upscaled_img_full = Image.new("RGB", (width * 4, height * 4))
-#
-#     with torch.no_grad():
-#         for i in range(0, height, block_size):
-#             for j in range(0, width, block_size):
-#
-#
-#     # Передаем объект PIL непосредственно в ImageLoader.load_image
-#     inputs = ImageLoader.load_image(img)
-#     preds = model(inputs)
-#
-#     ImageLoader.save_image(pred=preds, output_file=fr'pdf_appRecognizer/extract_assets/image_files/{upscaled_img}')
-#     ImageLoader.save_compare(input=inputs, pred=preds,
-#                              output_file=fr'pdf_appRecognizer/extract_assets/image_files/{upscaled_img.replace(
-#                                  '.png', '')}_compare.png')
 
 
 def upscale(img_path: str, upscaled_img: str, model: torch.nn.Module):
@@ -151,19 +122,22 @@ def upscale(img_path: str, upscaled_img: str, model: torch.nn.Module):
     torch.cuda.empty_cache()
 
 
-img_path = r'pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2_scale_x4.png'
-image = Image.open(fp=img_path)
-cur_model = EdsrModel.from_pretrained('eugenesiow/edsr-base', scale=2)
+reader = easyocr.Reader(['ru'])
 
-upscale(img_path=img_path, upscaled_img='Test_Table_YPD_2_scale_x4_scale_x2.png', model=cur_model)
+img = Image.open(fp='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhance_ver2_UPD_1_scaled_3.png')
+
+gray_img = img.convert('L')
+gray_img = cv2.imread('pdf_appRecognizer/extract_assets/image_files/YPD_1/enhance_ver2_UPD_1_scaled_3.png')
+
+result = reader.readtext(gray_img, detail=0)
+
+extracted_data: dict = {
+    'extracted_data': result
+}
+
+with open(file='pdf_appRecognizer/extract_assets/json_files/extracted_data_easyOCR.json',
+          mode='w', encoding='utf-8') as json_file:
+    json.dump(obj=extracted_data, fp=json_file, ensure_ascii=False, indent=3)
 
 
-# cur_model = EdsrModel.from_pretrained('eugenesiow/edsr-base', scale=2)
-# inputs = ImageLoader.load_image(image)
-# preds = cur_model(inputs)
-#
-# ImageLoader.save_image(preds,
-#                        r'pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2_scaled_4x.png')                        # save the output 2x scaled image to `./scaled_2x.png`
-# ImageLoader.save_compare(inputs, preds,
-#                          r'pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2_scaled_4x_compare.png')      # save an output comparing the super-image with a bicubic scaling
-
+print(result)
