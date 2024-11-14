@@ -67,7 +67,7 @@ class ImageDataExtracter:
         return text
 
     def tesseract_extraction(self) -> str:
-        img = Image.open(self._full_path)
+        img = Img.open(self._full_path)
 
         pytesseract.pytesseract.tesseract_cmd: str = self._path_to_tesseract
 
