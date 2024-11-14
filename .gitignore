@@ -35,3 +35,6 @@ result.txt
 
 # description of test cases (data exctracting from image)
 description_of_test_cases.txt
+
+# temp png files for se results of data detection by TesseractOCR
+test.png
