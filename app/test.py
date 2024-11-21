@@ -1,17 +1,16 @@
 import cv2
-import imutils
+import easyocr
 import json
 import os
 import torch
+import pytesseract
 
 import pandas as pd
-import pytesseract
 import numpy as np
-import matplotlib.pyplot as plt
 
 from dotenv import load_dotenv
 from img2table.document import Image
-from img2table.ocr import TesseractOCR
+from img2table.ocr import TesseractOCR, EasyOCR
 from pytesseract import Output
 from PIL import ImageEnhance, ImageFilter
 from PIL import Image as Img
@@ -28,7 +27,7 @@ load_dotenv()
 TESSERACT_OCR: str = os.getenv('TESSERACT')
 
 
-def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, contrast: float = 1.3,
+def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, contrast: float = 0.7,
                         blur: int = 1) -> None:
     """
     Функция улучшения качества изображения. Ненамного, ну качество улучшает
@@ -45,11 +44,16 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
     # Загружаем изображение
     img = cv2.imread(img_path)
 
-    # Придаем серый оттеннок
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # Придаем серый оттеннок для лучшего распознавания TesseractOCR
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)         # OR  cv2.COLOR_BGR2GRAY but 2-dimension
+    # print('Shape of gray_img:', gray_img.shape)
+    # print('Type of gray_img:', type(gray_img))
+
+    # Используем метод threshold для преобразования изображения в бинарное (черно-белое) представление
+    # cleared_gray_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY)[1]
 
     # конвертируем image в PIL Image
-    pil_img = Img.fromarray(img)
+    pil_img = Img.fromarray(gray_img)
 
     # Увеличиваем резкость изображения
     enhancer = ImageEnhance.Sharpness(pil_img)
@@ -84,6 +88,7 @@ def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torc
     model = model.to(cur_device)
 
     img = np.array(Img.open(path_to_based_img), dtype=np.float32) / 255.0
+
     img = img[:, :, 0:3]
 
     tile_count_x: int = 16
@@ -116,8 +121,12 @@ def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torc
     torch.cuda.empty_cache()
 
 
-def dt_img2excel(img_path: str, xlsx_path: str, ocr_language: str = 'rus') -> None:
-    ocr = TesseractOCR(lang=ocr_language)
+def dt_img2excel(img_path: str, xlsx_path: str, ocr_language: str = 'rus', is_tesseract: bool = False) -> None:
+    ocr = EasyOCR(lang=['ru'])
+
+    if is_tesseract:
+        ocr = TesseractOCR(lang=ocr_language)
+
     # Создаем экзмепляр класса документ
     doc_dt = Image(src=img_path)
     extracted_tables = doc_dt.extract_tables(ocr=ocr)
@@ -127,18 +136,19 @@ def dt_img2excel(img_path: str, xlsx_path: str, ocr_language: str = 'rus') -> No
     for table in extracted_tables:
         for row in table.content.values():
             for cell in row:
-                cv2.rectangle(table_img, (cell.bbox.x1, cell.bbox.y1), (cell.bbox.x2, cell.bbox.y2), (255, 0, 0), 2)
+                cv2.rectangle(table_img, (cell.bbox.x1, cell.bbox.y1), (cell.bbox.x2, cell.bbox.y2), (255, 0, 1), 2)
 
+    print(Img.fromarray(table_img).save("test.png"))
     doc_dt.to_xlsx(dest=xlsx_path, ocr=ocr)
 
 
-def prep_image_var(input_img: str, output_img: str) -> None:
+def detect_dt_part(input_img: str, output_img: str) -> None:
     """
     Эта функция выделяет именно табличную часть (тестировал только для одностраничных УПД)
     :return: None
     """
     img = cv2.imread(input_img)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # (Изображение уже серое)
 
     _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
     # Выделяем контуры для табличной части
@@ -158,20 +168,6 @@ def prep_image_var(input_img: str, output_img: str) -> None:
             table_image = cv2.bitwise_and(img, img, mask=mask)
             cv2.imwrite(output_img, img=table_image)
             return
-
-
-            # Извлечение области таблицы
-            table_image_2 = cv2.imread('pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2.png')
-            gray_img = cv2.cvtColor(table_image_2, cv2.COLOR_BGR2GRAY)
-            cv2.imwrite('pdf_appRecognizer/extract_assets/image_files/Test_Table_YPD_2_2.png', img=gray_img)
-
-
-def extract_dt_img(img_file: str):
-    image = cv2.imread(filename=img_file)
-
-    config_options = r'--psm 6'
-    data = pytesseract.image_to_string(image=image, config=config_options, lang='rus')
-    return data
 
 
 def data_write_collection(collection: dict, filename: str,
@@ -203,121 +199,89 @@ def test_pdf_to_image():
                               to_save='pdf_appRecognizer/extract_assets/pdf_files/УПД_1.pdf')
 
 
-def test_converted_pdf_for_extracting():
-    """
-    А тут я тестировал конвертированный пдф (пнг -> пдф) на извлечение. К сожалению, камелотом вообще ничего не извле-
-    кает.
-    :return: None
-    """
-
-    # Ф-ия для конвертирования из pdf в png. Сейчас не используется, так как примеры упд в формате пнг я беру из инета
-    camelot_instance = PdfCamelot(path_dir='pdf_appRecognizer/extract_assets/pdf_files',
-                                  pdf_file='УПД_1.pdf')
-    # Считываем таблицы с помощью камелота
-    tables = camelot_instance.read_tables()
-
-    # Получаем кол-во таблиц для обработки
-    table_numbers: int = tables.n
-    if table_numbers == 1:
-        table: list = tables[0].data
-    else:
-        table: list = []
-        for i in range(0, table_numbers):
-            table += tables[i].data
-
-    # Затем импортируем класс DataCleaning для очистки и работы с извлеченной таблицей
-    cleaned_table: list = DataCleaning.data_clean(data_table=table)
-
-    # Далее извлекаем текст из pdf (без учета структуры) для извлечения данных вне табличной части
-    # (ИНН/КПП, Счет-фактура)
-    pdf = PdfTextReader(path_dir='pdf_appRecognizer/extract_assets/pdf_files',
-                        pdf_file='УПД.pdf')
-
-    # Создаем экземпляр класса текст
-    text = pdf.extract_text_from_pdf()
-    # Извлекаем текст из pdf
-    my_regulars: 'DataExtraction' = DataExtractionPDF(text=text)
-
-    # Извлекаем остальные данные (ИНН/КПП, Счет-фактура)
-    inn_kpp: str = my_regulars.inn_and_kpp_extract()
-    invoice: str = my_regulars.invoice_extract()
-
-    # Извлекаем значение всего к оплате
-    totals: tuple = my_regulars.total_sum_extract(data_table=cleaned_table)
-    # Формируем хэш-таблицу на основе полученных данных
-    data = DataCollection()
-    collection = data.data_collect(inn_kpp=inn_kpp, invoice=invoice, cleaned_data=cleaned_table, totals=totals)
-
-    # Записываем словарь в json-файл
-    DictToJson.write_to_json(collection=collection, path_to_save='pdf_appRecognizer/extract_assets/json_files')
-
-
-def image_extracting(image_file_and_folder: str, image_lang: str):
+def image_extracting(image_file_and_folder: str, image_lang: str, is_tesseract: bool = False,
+                     is_paragraph: bool = False):
     """
     Эта функция через регулярки извлекает данные ВНЕ таблицы. Работает по НЕСТРУКТУРИРОВАННОМУ тексту
+    :param is_paragraph:
+    :param is_tesseract: параметр, который обозначает использование TesseractOCR
     :param image_lang: Язык, который нужно извлечь из картинки
     :param image_file_and_folder: Путь до файла (Формат: название_папки/название_файла)
     :return: None
     """
 
-    # Создаем экземпляр класса curr_image для работы с ним. Структура таблицы в таком варианте теряется.
-    curr_image = ImageDataExtracter(path_dir='pdf_appRecognizer/extract_assets/image_files',
-                                    image_file=image_file_and_folder,
-                                    path_to_tesseract=TESSERACT_OCR, language=image_lang)
+    if is_tesseract:
+        # Создаем экземпляр класса curr_image для работы с ним. Структура таблицы в таком варианте теряется.
+        curr_image = ImageDataExtracter(path_dir='pdf_appRecognizer/extract_assets/image_files',
+                                        image_file=image_file_and_folder,
+                                        path_to_tesseract=TESSERACT_OCR, language=image_lang)
 
-    extracted_text = curr_image.tesseract_extraction()
-    # Вывод извлеченного текста (без структуры)
-    print(extracted_text, '\n\n')
-    return
+        extracted_text = curr_image.tesseract_extraction()
+        # Вывод извлеченного текста (без структуры)
+        print(extracted_text, '\n\n')
+        return
 
-    # Далее создаем экземпляр класса text_instance для дальнейшего извлечения полей через регулярки.
-    text_instance = DataExtractionImage(text=extracted_text)
+        # Далее создаем экземпляр класса text_instance для дальнейшего извлечения полей через регулярки.
+        text_instance = DataExtractionImage(text=extracted_text)
 
-    # Далее с помощью класса DataExtractionImage извлекаю данные. файл с классом находится в app/pdf_appRecognizer/classes/text_extracter.py
-    inn_kpp: str = text_instance.inn_and_kpp_extract()
-    seller: str = text_instance.seller_extract()
-    invoice: str = text_instance.invoice_extract()
-    adress: str = text_instance.adress_extract()
-    loaded_date: str = text_instance.loaded_document_extract()
+        # Далее с помощью класса DataExtractionImage извлекаю данные. файл с классом находится в app/pdf_appRecognizer/classes/text_extracter.py
+        inn_kpp: str = text_instance.inn_and_kpp_extract()
+        seller: str = text_instance.seller_extract()
+        invoice: str = text_instance.invoice_extract()
+        adress: str = text_instance.adress_extract()
+        loaded_date: str = text_instance.loaded_document_extract()
 
-    data_collection: dict = {
-        'Счет-фактура_№': invoice,
-        'Продавец': seller,
-        'ИНН/КПП': inn_kpp,
-        'Адрес': adress,
-        'Документ_об_отгрузке': loaded_date
-    }
-    # Записываем в файл json
-    data_write_collection(collection=data_collection, path='pdf_appRecognizer/extract_assets/json_files')
+        data_collection: dict = {
+            'Счет-фактура_№': invoice,
+            'Продавец': seller,
+            'ИНН/КПП': inn_kpp,
+            'Адрес': adress,
+            'Документ_об_отгрузке': loaded_date
+        }
+        # Записываем в файл json
+        data_write_collection(collection=data_collection, path='pdf_appRecognizer/extract_assets/json_files')
 
-    print(f'ИНН/КПП продавца: {inn_kpp}', f'Продавец: {seller}', f'Счет-фактура № {invoice}',
-          f'Адресс: {adress}', f'Документ об отгрузке: {loaded_date}', sep='\n')
+        print(f'ИНН/КПП продавца: {inn_kpp}', f'Продавец: {seller}', f'Счет-фактура № {invoice}',
+              f'Адресс: {adress}', f'Документ об отгрузке: {loaded_date}', sep='\n')
+    else:
+        reader = easyocr.Reader([image_lang[:len(image_lang)-1]])
+        img = Img.open(fp=f'pdf_appRecognizer/extract_assets/image_files/{image_file_and_folder}')
+
+        img = img.convert('L')     # Преобразуем в серое изображение
+        # Эта строчка нужна для преобразование в numpy array
+        gray_img = cv2.imread(filename=f'pdf_appRecognizer/extract_assets/image_files/{image_file_and_folder}')
+
+        allow_list: str = 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ-'
+
+        result = reader.readtext(gray_img, detail=0, paragraph=is_paragraph,
+                                 allowlist=f'{allow_list}/{allow_list[:len(allow_list)-1].lower()}')
+        print(result)
 
 
-def test():
-    image_extracting(image_file_and_folder='YPD_1/UPD_1.png',
-                     image_lang='rus')    # Извлекаем из базовой картинки
-    #
-    improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhanced_UPD_1_scale_2.png',
-                        output_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhanced_2x_UPD_1_scale_2.png')
+def test(is_img_processing: bool = False):
+    # image_extracting(image_file_and_folder='YPD_3/YPD_3.png',
+    #                  image_lang='rus', is_paragraph=False)    # Извлекаем из базовой картинки
 
     print('---------------------------------------------------------------------\n\n')
 
-    # img_path = r'pdf_appRecognizer/extract_assets/image_files/YPD_1/enhanced_UPD_1.png'
+    if is_img_processing:
+        # img_path = r'pdf_appRecognizer/extract_assets/image_files/YPD_4/YPD_4.png'
+        #
+        # cur_model = EdsrModel.from_pretrained('eugenesiow/edsr-base', scale=2)
+        #
+        # upscale_image(path_to_based_img=img_path, path_to_upscaled_img='YPD_4/YPD_4_scales_2.png',
+        #               model=cur_model)
+
+        improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/UPD_1.png',
+                            output_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhanced_UPD_1.png')
+
+    # image_extracting(image_file_and_folder='YPD_3/enhanced_YPD_3_scales_2.png',
+    #                  image_lang='rus', is_paragraph=False)    # Извлекаем из базовой картинки
+
+    # is_paragraph=True нужен только для работы с таблицами данных.Данный параметр лучше сегментирует данные.
     #
-    # cur_model = EdsrModel.from_pretrained('eugenesiow/edsr-base', scale=2)
-
-    # upscale_image(path_to_based_img=img_path, path_to_upscaled_img='YPD_1/enhanced_UPD_1_scale_2.png', model=cur_model)
-    #
-
-    image_extracting(image_file_and_folder='YPD_1/enhanced_2x_UPD_1_scale_2.png',
-                     image_lang='rus')    # Извлекаем из базовой картинки
-
-    # dt_img2excel(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhanced_UPD_1.png',
-    #              xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test_3.xlsx')
-
-    dt_img2excel(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhanced_2x_UPD_1_scale_2.png',
-                 xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test_4.xlsx')
+    # dt_img2excel(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_3/YPD_3_scales_2.png',
+    #              xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test_7.xlsx', is_tesseract=False)
 
 
-test()
+test(is_img_processing=True)
