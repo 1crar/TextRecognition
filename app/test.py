@@ -199,9 +199,11 @@ def test_pdf_to_image():
                               to_save='pdf_appRecognizer/extract_assets/pdf_files/УПД_1.pdf')
 
 
-def image_extracting(image_file_and_folder: str, image_lang: str, is_tesseract: bool = False):
+def image_extracting(image_file_and_folder: str, image_lang: str, is_tesseract: bool = False,
+                     is_paragraph: bool = False):
     """
     Эта функция через регулярки извлекает данные ВНЕ таблицы. Работает по НЕСТРУКТУРИРОВАННОМУ тексту
+    :param is_paragraph:
     :param is_tesseract: параметр, который обозначает использование TesseractOCR
     :param image_lang: Язык, который нужно извлечь из картинки
     :param image_file_and_folder: Путь до файла (Формат: название_папки/название_файла)
@@ -249,31 +251,37 @@ def image_extracting(image_file_and_folder: str, image_lang: str, is_tesseract: 
         # Эта строчка нужна для преобразование в numpy array
         gray_img = cv2.imread(filename=f'pdf_appRecognizer/extract_assets/image_files/{image_file_and_folder}')
 
-        result = reader.readtext(gray_img, detail=0)
+        allow_list: str = 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ-'
+
+        result = reader.readtext(gray_img, detail=0, paragraph=is_paragraph,
+                                 allowlist=f'{allow_list}/{allow_list[:len(allow_list)-1].lower()}')
         print(result)
 
 
-def test():
-    image_extracting(image_file_and_folder='YPD_1/UPD_1.png',
-                     image_lang='rus')    # Извлекаем из базовой картинки
+def test(is_img_processing: bool = False):
+    # image_extracting(image_file_and_folder='YPD_3/YPD_3.png',
+    #                  image_lang='rus', is_paragraph=False)    # Извлекаем из базовой картинки
 
     print('---------------------------------------------------------------------\n\n')
 
-    # img_path = r'pdf_appRecognizer/extract_assets/image_files/YPD_1/UPD_1.png'
-    #
-    # cur_model = EdsrModel.from_pretrained('eugenesiow/edsr-base', scale=3)
-    #
-    # upscale_image(path_to_based_img=img_path, path_to_upscaled_img='YPD_1/UPD_1_scaled_3.png',
-    #               model=cur_model)
-    #
-    # improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/UPD_1_scaled_3.png',
-    #                     output_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhance_ver2_UPD_1_scaled_3.png')
-    #
-    image_extracting(image_file_and_folder='YPD_1/enhance_ver2_UPD_1_scaled_4.png',
-                     image_lang='rus')    # Извлекаем из базовой картинки
+    if is_img_processing:
+        # img_path = r'pdf_appRecognizer/extract_assets/image_files/YPD_4/YPD_4.png'
+        #
+        # cur_model = EdsrModel.from_pretrained('eugenesiow/edsr-base', scale=2)
+        #
+        # upscale_image(path_to_based_img=img_path, path_to_upscaled_img='YPD_4/YPD_4_scales_2.png',
+        #               model=cur_model)
 
-    dt_img2excel(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhance_ver2_UPD_1_scaled_4.png',
-                 xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test_4.xlsx', is_tesseract=False)
+        improve_img_quality(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/UPD_1.png',
+                            output_path='pdf_appRecognizer/extract_assets/image_files/YPD_1/enhanced_UPD_1.png')
+
+    # image_extracting(image_file_and_folder='YPD_3/enhanced_YPD_3_scales_2.png',
+    #                  image_lang='rus', is_paragraph=False)    # Извлекаем из базовой картинки
+
+    # is_paragraph=True нужен только для работы с таблицами данных.Данный параметр лучше сегментирует данные.
+    #
+    # dt_img2excel(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_3/YPD_3_scales_2.png',
+    #              xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test_7.xlsx', is_tesseract=False)
 
 
-test()
+test(is_img_processing=True)
