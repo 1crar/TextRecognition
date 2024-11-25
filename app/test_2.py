@@ -59,7 +59,7 @@ def upscale(img_path: str, upscaled_img: str, model: torch.nn.Module):
 # langs = args["langs"].split(",")
 
 
-image_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/27.png'
+image_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/23.png'
 image_cv2 = cv2.imread(filename=image_path)
 languages: list = ['ru']
 
