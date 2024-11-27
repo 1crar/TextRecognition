@@ -84,11 +84,9 @@ def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torc
     """
 
     cur_device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
     model = model.to(cur_device)
 
     img = np.array(Img.open(path_to_based_img), dtype=np.float32) / 255.0
-
     img = img[:, :, 0:3]
 
     tile_count_x: int = 16
@@ -103,9 +101,9 @@ def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torc
     upscaled = None
     count: int = 0
 
-    for i in range(tile_count_y + 1):
+    for i in range(tile_count_y):
         col = None
-        for j in range(tile_count_x + 1):
+        for j in range(tile_count_x):
             pred = model(inputs[i][j])
             res = pred.detach().to('cpu').squeeze(0).permute(1, 2, 0)
             # print(f"Image tile #{count}. Upscaled shape: {res.shape}")
@@ -115,31 +113,112 @@ def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torc
         upscaled = col if upscaled is None else torch.cat([upscaled, col], dim=1)
 
     # Сохраняем итоговое изображение
-    cv2.imwrite(fr'pdf_appRecognizer/extract_assets/image_files/{path_to_upscaled_img}',
-                upscaled.numpy() * 255.0)
+    cv2.imwrite(path_to_upscaled_img, upscaled.numpy() * 255.0)
 
     torch.cuda.empty_cache()
 
 
-def dt_img2excel(img_path: str, xlsx_path: str, ocr_language: str = 'rus', is_tesseract: bool = False) -> None:
+def upscale_img_ver2(path_to_based_img: str, path_to_upscaled_img: str, model: torch.nn.Module) -> None:
+    cur_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    model = model.to(cur_device)
+
+    # Освободим кэш памяти CUDA
+    torch.cuda.empty_cache()
+
+    # Предобработка изображения
+    img = np.array(Img.open(path_to_based_img))
+
+    # Уплотняем шрифт
+    img = cv2.erode(src=img, kernel=np.ones((2, 2)), iterations=1)
+
+    # Изменение размера для уменьшения использования памяти
+    # img = cv2.resize(img, (img.shape[1] // 4, img.shape[0] // 4))
+
+    # Обратная трансформация изображения из np.array
+    img = Img.fromarray(img)
+    img.show()
+    img.save(fp='temp/enhanced_test_2.png')
+
+    inputs = ImageLoader.load_image(image=img)
+    inputs = inputs.to(cur_device)
+
+    preds = model(inputs)
+
+    ImageLoader.save_image(pred=preds, output_file=path_to_upscaled_img)
+
+
+def dt_img2excel(img_path: str, xlsx_path: str, offset: int = 3, is_cell: bool = True) -> list:
+    """
+    :param is_cell:
+    :param img_path:
+    :param xlsx_path:
+    :param offset: Сделать его гибким
+    :return:
+    """
     ocr = EasyOCR(lang=['ru'])
 
-    if is_tesseract:
-        ocr = TesseractOCR(lang=ocr_language)
-
-    # Создаем экзмепляр класса документ
+    # Создаем экземпляр класса документ
     doc_dt = Image(src=img_path)
     extracted_tables = doc_dt.extract_tables(ocr=ocr)
 
     table_img = cv2.imread(filename=img_path)
+    extracted_data: list = []
 
-    for table in extracted_tables:
-        for row in table.content.values():
-            for cell in row:
-                cv2.rectangle(table_img, (cell.bbox.x1, cell.bbox.y1), (cell.bbox.x2, cell.bbox.y2), (255, 0, 1), 2)
+    if is_cell:
+        # Обрезаем по каждой ячейке
+        for idx, table in enumerate(extracted_tables):
+            for row in table.content.values():
+                for cell in row:
+                    # Прорисовка табличной части
+                    cv2.rectangle(table_img, (cell.bbox.x1, cell.bbox.y1), (cell.bbox.x2, cell.bbox.y2), (255, 0, 1), 2)
 
-    print(Img.fromarray(table_img).save("test.png"))
-    doc_dt.to_xlsx(dest=xlsx_path, ocr=ocr)
+                    # Обрезаем область ячейки + пиксельный отступ
+                    crop_img = table_img[
+                               max(0, cell.bbox.y1 + offset):cell.bbox.y2 - offset,
+                               max(0, cell.bbox.x1 + offset):cell.bbox.x2 - offset
+                               ]
+                    try:
+                        reader = easyocr.Reader(lang_list=['ru'], gpu=True)
+                        results = reader.readtext(crop_img)
+
+                        for (bbox, text, prob) in results:
+                            print(text)
+                            extracted_data.append(text)
+
+                        # print(results)
+                        # extracted_data.append(text)
+
+                        cv2.imwrite(f'pdf_appRecognizer/extract_assets/image_files/dt_cells/'
+                                    f'table_cell_{idx}_{cell.bbox.x1}_{cell.bbox.y1}.png', crop_img)
+                    except Exception as e:
+                        print(f"ERROR: {e}")
+    else:
+        # Обрезаем всю табличную часть
+        for idx, table in enumerate(extracted_tables):
+            # Инициализируем минимальные и максимальные границы
+            min_x1 = min(cell.bbox.x1 for row in table.content.values() for cell in row)
+            min_y1 = min(cell.bbox.y1 for row in table.content.values() for cell in row)
+            max_x2 = max(cell.bbox.x2 for row in table.content.values() for cell in row)
+            max_y2 = max(cell.bbox.y2 for row in table.content.values() for cell in row)
+
+            # Обрезаем всю табличную часть с учетом границ и отступа
+            crop_img = table_img[
+                       max(0, min_y1 - offset):max_y2 + offset,
+                       max(0, min_x1 - offset):max_x2 + offset
+                       ]
+
+            # Сохраняем изображение табличной части
+            # all_cropped_images.append(crop_img)
+
+            try:
+                cv2.imwrite('temp/test_2.png', crop_img)
+            except Exception as e:
+                print(f"ERROR: {e}")
+
+    Img.fromarray(table_img).save("temp/test.png")
+    # doc_dt.to_xlsx(dest=xlsx_path, ocr=ocr)
+    return extracted_data
 
 
 def detect_dt_part(input_img: str, output_img: str) -> None:
@@ -284,4 +363,18 @@ def test(is_img_processing: bool = False):
     #              xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test_7.xlsx', is_tesseract=False)
 
 
-test(is_img_processing=True)
+# test(is_img_processing=True)
+
+data = dt_img2excel(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_2/YPD_2.png',
+                    xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test.xlsx', is_cell=True)
+print(data)
+
+# filename: str = 'enhanced_test_2.png'
+# # upscaled_img_path: str = f'pdf_appRecognizer/extract_assets/image_files/dt_cells/{filename}'
+# #
+# cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
+# upscale_image(path_to_based_img=filename,
+#               path_to_upscaled_img=f'scaled_4_{filename}',
+#               model=cur_model)
+
+

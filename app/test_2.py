@@ -8,6 +8,9 @@ import torch
 import easyocr
 import numpy as np
 
+from img2table.ocr import EasyOCR
+from PIL import Image as Img
+
 load_dotenv()
 
 
@@ -46,34 +49,37 @@ def upscale(img_path: str, upscaled_img: str, model: torch.nn.Module):
     cv2.imwrite(fr'pdf_appRecognizer/extract_assets/image_files/{upscaled_img}',
                 upscaled.numpy() * 255.0)
 
-    # Сохраняем сравнение
-    # ImageLoader.save_compare(input=inputs.cpu(), pred=preds.cpu(),
-    #                          output_file=fr'pdf_appRecognizer/extract_assets/image_files/'
-    #                                      fr'{upscaled_img.replace(".png", "")}_compare.png')
-
-    # Освобождаем память
-    # del inputs
-    # del preds
     torch.cuda.empty_cache()
 
-# langs = args["langs"].split(",")
 
+enhanced_file: str = 'temp/scaled_4_enhanced_test_2.png'
+image_path: str = f'pdf_appRecognizer/extract_assets/image_files/dt_cells/{enhanced_file}'
 
-image_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/23.png'
-image_cv2 = cv2.imread(filename=image_path)
+image_cv2 = cv2.imread(filename=enhanced_file)
 languages: list = ['ru']
+
+# dt_img2excel(img_path=image_path)
+
 
 print("[INFO] OCR'ing input image...")
 print(f"[INFO] OCR'ing with the following languages: {languages}")
 
-reader = easyocr.Reader(lang_list=languages, gpu=True)
 test_case: int = 2
 
 if test_case == 1:
-    results = reader.readtext(image_cv2, blocklist='~^<>&?!+*={}[]@|€$є₽r', text_threshold=0.75,
-                              contrast_ths=1.5, width_ths=1.25, height_ths=0.75, ycenter_ths=0.5, slope_ths=1,
-                              add_margin=0.175, decoder='wordbeamsearch', beamWidth=20, canvas_size=3500)
+    reader = easyocr.Reader(lang_list=languages, gpu=True,
+                            model_storage_directory='fine_tune', user_network_directory='fine_tune',
+                            recog_network='ru_finetune')
+    # results = reader.readtext(image_cv2, text_threshold=0.75, contrast_ths=0.7, width_ths=1.25, height_ths=0.75,
+    #                           ycenter_ths=0.5, slope_ths=1, add_margin=0.175, decoder='wordbeamsearch', beamWidth=20,
+    #                           canvas_size=3500)
+    # Not bad
+    results = reader.readtext(image_cv2, text_threshold=0.75, contrast_ths=0.8, width_ths=1.3, height_ths=0.75,
+                              ycenter_ths=0.5, slope_ths=1, add_margin=0.200, decoder='wordbeamsearch', beamWidth=20,
+                              canvas_size=3500)
 if test_case == 2:
+    reader = easyocr.Reader(lang_list=languages, gpu=True)
+    # results = reader.readtext(image_cv2)
     results = reader.readtext(image_cv2)
 
 # Преобразуем изображение OpenCV в формат PIL
@@ -81,7 +87,7 @@ image_pil = Image.fromarray(cv2.cvtColor(image_cv2, cv2.COLOR_BGR2RGB))
 draw = ImageDraw.Draw(image_pil)
 
 # Выберите шрифт (если нужный шрифт не установлен, вы можете указать путь к .ttf файлу)
-font = ImageFont.truetype(font="arial.ttf", size=18)  # Убедитесь, что путь к шрифту корректный
+font = ImageFont.truetype(font="arial.ttf", size=20)  # Убедитесь, что путь к шрифту корректный
 
 for (bbox, text, prob) in results:
     print("[INFO] {:.4f}: {}".format(prob, text))
@@ -100,7 +106,7 @@ for (bbox, text, prob) in results:
 image_pil.show()
 
 # Сохранение изображения (необязательно)
-image_pil.save('test.png')
+# image_pil.save('test_3.png')
 
 
 # reader = easyocr.Reader(['ru'])
