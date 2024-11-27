@@ -37,7 +37,7 @@ result.txt
 description_of_test_cases.txt
 
 # temp png files for se results of data detection by TesseractOCR
-test.png
+app/temp
 
-test_3.py
 10000-russian-words.txt
+russian.txt
