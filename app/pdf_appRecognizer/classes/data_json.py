@@ -100,7 +100,7 @@ class DictToJson:
     """
     @staticmethod
     def write_to_json(collection: dict, path_to_save: str) -> None:
-        with open(file=f'{path_to_save}/УПД_1.json', mode='w', encoding='utf-8') as file:
+        with open(file=path_to_save, mode='w', encoding='utf-8') as file:
             json.dump(obj=collection, fp=file, ensure_ascii=False, indent=3)
 
 

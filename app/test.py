@@ -43,6 +43,8 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
 
     # Загружаем изображение
     img = cv2.imread(img_path)
+    # Уплотняем шрифт
+    img = cv2.erode(src=img, kernel=np.ones((2, 2)), iterations=1)
 
     # Придаем серый оттеннок для лучшего распознавания TesseractOCR
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)         # OR  cv2.COLOR_BGR2GRAY but 2-dimension
@@ -71,6 +73,7 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
 
     # Конвертируем в PIL Image (Im) и сохраняем
     img_enhanced = Img.fromarray(img_enhanced)
+    img_enhanced.show()
     img_enhanced.save(output_path)
 
 
@@ -86,35 +89,37 @@ def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torc
     cur_device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = model.to(cur_device)
 
-    img = np.array(Img.open(path_to_based_img), dtype=np.float32) / 255.0
-    img = img[:, :, 0:3]
+    # Конвертация обратно в "RGB" для создания 3-измерения (модель прогоняет только их)
+    img = np.array(Img.open(path_to_based_img).convert("RGB"), dtype=np.float32) / 255.0
 
     tile_count_x: int = 16
     tile_count_y: int = 16
 
-    m = img.shape[0] // tile_count_x
-    n = img.shape[1] // tile_count_y
-
-    tiles = [[img[x:x + m, y:y + n] for x in range(0, img.shape[0], m)] for y in range(0, img.shape[1], n)]
-    inputs = [[torch.from_numpy(tile).permute(2, 0, 1).unsqueeze(0).to(cur_device) for tile in part] for part in tiles]
-
     upscaled = None
     count: int = 0
 
-    for i in range(tile_count_y):
-        col = None
-        for j in range(tile_count_x):
-            pred = model(inputs[i][j])
-            res = pred.detach().to('cpu').squeeze(0).permute(1, 2, 0)
-            # print(f"Image tile #{count}. Upscaled shape: {res.shape}")
-            count += 1
-            col = res if col is None else torch.cat([col, res], dim=0)
-            del pred
-        upscaled = col if upscaled is None else torch.cat([upscaled, col], dim=1)
+    # Проверка 3-мерный массив
+    if len(img.shape) == 3:
+        img = img[:, :, 0:3]
 
+        m = img.shape[0] // tile_count_x
+        n = img.shape[1] // tile_count_y
+
+        tiles = [[img[x:x + m, y:y + n] for x in range(0, img.shape[0], m)] for y in range(0, img.shape[1], n)]
+        inputs = [[torch.from_numpy(tile).permute(2, 0, 1).unsqueeze(0).to(cur_device) for tile in part] for part in
+                  tiles]
+        for i in range(tile_count_y):
+            col = None
+            for j in range(tile_count_x):
+                pred = model(inputs[i][j])
+                res = pred.detach().to('cpu').squeeze(0).permute(1, 2, 0)
+                # print(f"Image tile #{count}. Upscaled shape: {res.shape}")
+                count += 1
+                col = res if col is None else torch.cat([col, res], dim=0)
+                del pred
+            upscaled = col if upscaled is None else torch.cat([upscaled, col], dim=1)
     # Сохраняем итоговое изображение
     cv2.imwrite(path_to_upscaled_img, upscaled.numpy() * 255.0)
-
     torch.cuda.empty_cache()
 
 
@@ -148,8 +153,9 @@ def upscale_img_ver2(path_to_based_img: str, path_to_upscaled_img: str, model: t
     ImageLoader.save_image(pred=preds, output_file=path_to_upscaled_img)
 
 
-def dt_img2excel(img_path: str, xlsx_path: str, offset: int = 3, is_cell: bool = True) -> list:
+def dt_img2excel(img_path: str, xlsx_path: str, offset: int = 3, is_cell: bool = True, is_erode: bool = True) -> list:
     """
+    :param is_erode:
     :param is_cell:
     :param img_path:
     :param xlsx_path:
@@ -178,19 +184,32 @@ def dt_img2excel(img_path: str, xlsx_path: str, offset: int = 3, is_cell: bool =
                                max(0, cell.bbox.y1 + offset):cell.bbox.y2 - offset,
                                max(0, cell.bbox.x1 + offset):cell.bbox.x2 - offset
                                ]
+                    # Уплотнение шрифта
+                    if is_erode:
+                        crop_img = cv2.erode(crop_img, kernel=np.ones((2, 2)), iterations=1)
                     try:
+                        temp_cell_img = (f'pdf_appRecognizer/extract_assets/image_files/dt_cells/'
+                                         f'table_cell_{idx}_{cell.bbox.x1}_{cell.bbox.y1}.png')
+                        cv2.imwrite(temp_cell_img, crop_img)
+
+                        # for (bbox, text, prob) in results:
+                        #     print(text)
+                        #     extracted_data.append(text)
+
+                        # enhanced_temp_cell_img = temp_cell_img.replace(f'table_cell_{idx}_{cell.bbox.x1}_'
+                        #                                                f'{cell.bbox.y1}.png',
+                        #                                                f'scaled_4_table_cell_{idx}_{cell.bbox.x1}'
+                        #                                                f'_{cell.bbox.y1}.png')
+                        # Временно сохраняем файл
+
+                        # Инициализируем объект reader (EasyOCR)
                         reader = easyocr.Reader(lang_list=['ru'], gpu=True)
-                        results = reader.readtext(crop_img)
+                        results = reader.readtext(temp_cell_img)
 
-                        for (bbox, text, prob) in results:
-                            print(text)
-                            extracted_data.append(text)
-
-                        # print(results)
-                        # extracted_data.append(text)
-
-                        cv2.imwrite(f'pdf_appRecognizer/extract_assets/image_files/dt_cells/'
-                                    f'table_cell_{idx}_{cell.bbox.x1}_{cell.bbox.y1}.png', crop_img)
+                        # Проходимся по циклу и добавляем извлеченное EasyOCR значение
+                        for el_tuple in results:
+                            print(f'INFO: OCR\'s extracted datatable value: {el_tuple[1]}')
+                            extracted_data.append(el_tuple[1])
                     except Exception as e:
                         print(f"ERROR: {e}")
     else:
@@ -284,7 +303,7 @@ def image_extracting(image_file_and_folder: str, image_lang: str, is_tesseract: 
     Эта функция через регулярки извлекает данные ВНЕ таблицы. Работает по НЕСТРУКТУРИРОВАННОМУ тексту
     :param is_paragraph:
     :param is_tesseract: параметр, который обозначает использование TesseractOCR
-    :param image_lang: Язык, который нужно извлечь из картинки
+    :param image_lang:
     :param image_file_and_folder: Путь до файла (Формат: название_папки/название_файла)
     :return: None
     """
@@ -327,7 +346,7 @@ def image_extracting(image_file_and_folder: str, image_lang: str, is_tesseract: 
         img = Img.open(fp=f'pdf_appRecognizer/extract_assets/image_files/{image_file_and_folder}')
 
         img = img.convert('L')     # Преобразуем в серое изображение
-        # Эта строчка нужна для преобразование в numpy array
+        # Эта строчка нужна для преобразования в numpy array
         gray_img = cv2.imread(filename=f'pdf_appRecognizer/extract_assets/image_files/{image_file_and_folder}')
 
         allow_list: str = 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ-'
@@ -365,16 +384,27 @@ def test(is_img_processing: bool = False):
 
 # test(is_img_processing=True)
 
-data = dt_img2excel(img_path='pdf_appRecognizer/extract_assets/image_files/YPD_2/YPD_2.png',
-                    xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test.xlsx', is_cell=True)
-print(data)
 
-# filename: str = 'enhanced_test_2.png'
+# input_filename: str = 'temp/test_2.png'
+# output_scaled_4_filename: str = input_filename.replace('test_2.png', 'scaled_4_test_2.png')
+#
 # # upscaled_img_path: str = f'pdf_appRecognizer/extract_assets/image_files/dt_cells/{filename}'
+#
+# # improve_img_quality(img_path=input_filename, output_path=output_scaled_4_filename)
+#
+# cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=2)
 # #
-# cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
-# upscale_image(path_to_based_img=filename,
-#               path_to_upscaled_img=f'scaled_4_{filename}',
+# upscale_image(path_to_based_img=input_filename,
+#               path_to_upscaled_img=output_scaled_4_filename,
 #               model=cur_model)
+
+data = dt_img2excel(img_path='temp/scaled_4_test_2.png',
+                    xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test.xlsx', is_erode=False)
+print(data)
+dt_collection: dict = {
+    "YPD_2_dt": data
+}
+# Запись извлеченных табличных данных в json.
+DictToJson.write_to_json(collection=dt_collection, path_to_save='temp/temp_dt_jsons/test_2.json')
 
 

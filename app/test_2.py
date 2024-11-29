@@ -14,48 +14,10 @@ from PIL import Image as Img
 load_dotenv()
 
 
-def upscale(img_path: str, upscaled_img: str, model: torch.nn.Module):
-    cur_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+enhanced_file: str = 'temp/scaled4_loveimg_test_2.png'
+image_path: str = f'pdf_appRecognizer/extract_assets/image_files/dt_cells/table_cell_0_3266_555.png'
 
-    model = model.to(cur_device)
-
-    img = np.array(Image.open(img_path), dtype=np.float32) / 255.0
-    img = img[:, :, 0:3]
-
-    tileCountX = 16
-    tileCountY = 16
-
-    M = img.shape[0] // tileCountX
-    N = img.shape[1] // tileCountY
-
-    tiles = [[img[x:x + M, y:y + N] for x in range(0, img.shape[0], M)] for y in range(0, img.shape[1], N)]
-    inputs = [[torch.from_numpy(tile).permute(2, 0, 1).unsqueeze(0).to(cur_device) for tile in part] for part in tiles]
-
-    upscaled = None
-    count = 0
-
-    for i in range(tileCountY + 1):
-        col = None
-        for j in range(tileCountX + 1):
-            pred = model(inputs[i][j])
-            res = pred.detach().to('cpu').squeeze(0).permute(1, 2, 0)
-            # print(f"Image tile #{count}. Upscaled shape: {res.shape}")
-            count += 1
-            col = res if col is None else torch.cat([col, res], dim=0)
-            del pred
-        upscaled = col if upscaled is None else torch.cat([upscaled, col], dim=1)
-
-    # Сохраняем итоговое изображение
-    cv2.imwrite(fr'pdf_appRecognizer/extract_assets/image_files/{upscaled_img}',
-                upscaled.numpy() * 255.0)
-
-    torch.cuda.empty_cache()
-
-
-enhanced_file: str = 'temp/scaled_4_enhanced_test_2.png'
-image_path: str = f'pdf_appRecognizer/extract_assets/image_files/dt_cells/{enhanced_file}'
-
-image_cv2 = cv2.imread(filename=enhanced_file)
+image_cv2 = cv2.imread(filename=image_path)
 languages: list = ['ru']
 
 # dt_img2excel(img_path=image_path)
@@ -87,7 +49,7 @@ image_pil = Image.fromarray(cv2.cvtColor(image_cv2, cv2.COLOR_BGR2RGB))
 draw = ImageDraw.Draw(image_pil)
 
 # Выберите шрифт (если нужный шрифт не установлен, вы можете указать путь к .ttf файлу)
-font = ImageFont.truetype(font="arial.ttf", size=20)  # Убедитесь, что путь к шрифту корректный
+font = ImageFont.truetype(font="arial.ttf", size=40)  # Убедитесь, что путь к шрифту корректный
 
 for (bbox, text, prob) in results:
     print("[INFO] {:.4f}: {}".format(prob, text))
