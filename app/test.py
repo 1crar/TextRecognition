@@ -1,3 +1,5 @@
+import copy
+
 import cv2
 import easyocr
 import json
@@ -77,7 +79,7 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
     img_enhanced.save(output_path)
 
 
-def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torch.nn.Module) -> None:
+def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torch.nn.Module) -> str:
     """
     Функция апскейла (улучшение качества изображения/увеличение разрашения изображения)
     :param path_to_based_img: Путь до изображения, которое будем улучшать
@@ -122,8 +124,10 @@ def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torc
     cv2.imwrite(path_to_upscaled_img, upscaled.numpy() * 255.0)
     torch.cuda.empty_cache()
 
+    return path_to_upscaled_img
 
-def upscale_img_ver2(path_to_based_img: str, path_to_upscaled_img: str, model: torch.nn.Module) -> None:
+
+def upscale_img_ver2(path_to_based_img: str, path_to_upscaled_img: str, model: torch.nn.Module) -> str:
     cur_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     model = model.to(cur_device)
@@ -153,13 +157,65 @@ def upscale_img_ver2(path_to_based_img: str, path_to_upscaled_img: str, model: t
     ImageLoader.save_image(pred=preds, output_file=path_to_upscaled_img)
 
 
-def dt_img2excel(img_path: str, xlsx_path: str, offset: int = 3, is_cell: bool = True, is_erode: bool = True) -> list:
+def detect_datatable_part(ypd_img_path: str, output_filename: str, temp_filename: str, offset: int = 0,
+                          is_erode: bool = True) -> str:
+    ocr_detector = EasyOCR(lang=['ru'])
+
+    # Создаем экземпляр класса документ
+    doc_dt = Image(src=ypd_img_path)
+    extracted_tables = doc_dt.extract_tables(ocr=ocr_detector)
+
+    table_img = cv2.imread(filename=ypd_img_path)
+    output_path: str = output_filename
+
+    for idx, table in enumerate(extracted_tables):
+        # Инициализируем минимальные и максимальные границы
+        min_x1 = min(cell.bbox.x1 for row in table.content.values() for cell in row)
+        min_y1 = min(cell.bbox.y1 for row in table.content.values() for cell in row)
+        max_x2 = max(cell.bbox.x2 for row in table.content.values() for cell in row)
+        max_y2 = max(cell.bbox.y2 for row in table.content.values() for cell in row)
+
+        # Вычисляем высоту таблицы и соотношение для нижнего отступа (так как иногда не захватывается ласт строка)
+        table_height = max_y2 - min_y1
+        # Динамически будет создаваться отступ в пропорции 5% от всей высоты таблицы
+        dynamic_lower_offset = int(table_height * 0.05)
+
+        # Создаем общий отступ
+        total_y_min = max(0, min_y1 - offset)
+        total_y_max = max_y2 + offset + dynamic_lower_offset
+
+        # Обрезаем всю табличную часть с учетом границ и отступа
+        crop_dt_img = table_img[
+                      total_y_min:total_y_max,
+                      max(0, min_x1 - offset):max_x2 + offset
+                      ]
+        # Следующие строки нужны для отладки процесса распознавания табличной части
+        detected_lines = copy.deepcopy(table_img)
+        # Прорисовка границ табличной части
+        for row in table.content.values():
+            for cell in row:
+                x1, y1, x2, y2 = cell.bbox.x1, cell.bbox.y1, cell.bbox.x2, cell.bbox.y2
+                cv2.rectangle(detected_lines, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        cv2.imwrite(filename=temp_filename, img=detected_lines)
+
+        # Сохраняем изображение табличной части
+        try:
+            if is_erode:
+                crop_dt_img = cv2.erode(crop_dt_img, kernel=np.ones((2, 2)), iterations=1)
+            cv2.imwrite(output_path, crop_dt_img)
+        except Exception as e:
+            # print(f"ERROR: {e}")
+            raise Exception(f"ERROR: ошибка записи файла - {e}")
+
+    return output_path
+
+
+def dt_img_extracter(img_path: str, offset: int = 3, is_cell_remove: bool = True) -> list:
     """
+    :param is_cell_remove:
     :param is_erode:
-    :param is_cell:
     :param img_path:
-    :param xlsx_path:
-    :param offset: Сделать его гибким
+    :param offset:
     :return:
     """
     ocr = EasyOCR(lang=['ru'])
@@ -171,71 +227,42 @@ def dt_img2excel(img_path: str, xlsx_path: str, offset: int = 3, is_cell: bool =
     table_img = cv2.imread(filename=img_path)
     extracted_data: list = []
 
-    if is_cell:
-        # Обрезаем по каждой ячейке
-        for idx, table in enumerate(extracted_tables):
-            for row in table.content.values():
-                for cell in row:
-                    # Прорисовка табличной части
-                    cv2.rectangle(table_img, (cell.bbox.x1, cell.bbox.y1), (cell.bbox.x2, cell.bbox.y2), (255, 0, 1), 2)
+    # Обрезаем по каждой ячейке
+    for idx, table in enumerate(extracted_tables):
+        for row in table.content.values():
+            for cell in row:
+                # Прорисовка табличной части
+                cv2.rectangle(table_img, (cell.bbox.x1, cell.bbox.y1), (cell.bbox.x2, cell.bbox.y2), (255, 0, 1), 2)
+                # Обрезаем область ячейки + пиксельный отступ
+                crop_img = table_img[
+                           max(0, cell.bbox.y1 + offset):cell.bbox.y2 - offset,
+                           max(0, cell.bbox.x1 + offset):cell.bbox.x2 - offset
+                           ]
+                # Уплотнение шрифта
+                # if is_erode:
+                #     crop_img = cv2.erode(crop_img, kernel=np.ones((2, 2)), iterations=1)
+                try:
+                    temp_cell_path_img: str = (f'pdf_appRecognizer/extract_assets/image_files/dt_cells/'
+                                               f'table_cell_{idx}_{cell.bbox.x1}_{cell.bbox.y1}.png')
+                    cv2.imwrite(temp_cell_path_img, crop_img)
 
-                    # Обрезаем область ячейки + пиксельный отступ
-                    crop_img = table_img[
-                               max(0, cell.bbox.y1 + offset):cell.bbox.y2 - offset,
-                               max(0, cell.bbox.x1 + offset):cell.bbox.x2 - offset
-                               ]
-                    # Уплотнение шрифта
-                    if is_erode:
-                        crop_img = cv2.erode(crop_img, kernel=np.ones((2, 2)), iterations=1)
-                    try:
-                        temp_cell_img = (f'pdf_appRecognizer/extract_assets/image_files/dt_cells/'
-                                         f'table_cell_{idx}_{cell.bbox.x1}_{cell.bbox.y1}.png')
-                        cv2.imwrite(temp_cell_img, crop_img)
+                    # Инициализируем объект reader (EasyOCR)
+                    reader = easyocr.Reader(lang_list=['ru'], gpu=True)
+                    results = reader.readtext(temp_cell_path_img, text_threshold=0.7, contrast_ths=0.8, width_ths=1.2,
+                                              height_ths=0.8, ycenter_ths=0.5, slope_ths=1, add_margin=0.200,
+                                              decoder='wordbeamsearch', beamWidth=20, canvas_size=3500)
+                    # Проходимся по циклу и добавляем извлеченное EasyOCR значение
+                    for el_tuple in results:
+                        print(f'INFO: OCR\'s extracted datatable value: {el_tuple[1]}')
+                        extracted_data.append(el_tuple[1])
+                    # Если True - удаляем вырезанную ячейку
+                    if is_cell_remove:
+                        os.remove(path=temp_cell_path_img)
 
-                        # for (bbox, text, prob) in results:
-                        #     print(text)
-                        #     extracted_data.append(text)
+                except Exception as e:
+                    print(f"ERROR: {e}")
 
-                        # enhanced_temp_cell_img = temp_cell_img.replace(f'table_cell_{idx}_{cell.bbox.x1}_'
-                        #                                                f'{cell.bbox.y1}.png',
-                        #                                                f'scaled_4_table_cell_{idx}_{cell.bbox.x1}'
-                        #                                                f'_{cell.bbox.y1}.png')
-                        # Временно сохраняем файл
-
-                        # Инициализируем объект reader (EasyOCR)
-                        reader = easyocr.Reader(lang_list=['ru'], gpu=True)
-                        results = reader.readtext(temp_cell_img)
-
-                        # Проходимся по циклу и добавляем извлеченное EasyOCR значение
-                        for el_tuple in results:
-                            print(f'INFO: OCR\'s extracted datatable value: {el_tuple[1]}')
-                            extracted_data.append(el_tuple[1])
-                    except Exception as e:
-                        print(f"ERROR: {e}")
-    else:
-        # Обрезаем всю табличную часть
-        for idx, table in enumerate(extracted_tables):
-            # Инициализируем минимальные и максимальные границы
-            min_x1 = min(cell.bbox.x1 for row in table.content.values() for cell in row)
-            min_y1 = min(cell.bbox.y1 for row in table.content.values() for cell in row)
-            max_x2 = max(cell.bbox.x2 for row in table.content.values() for cell in row)
-            max_y2 = max(cell.bbox.y2 for row in table.content.values() for cell in row)
-
-            # Обрезаем всю табличную часть с учетом границ и отступа
-            crop_img = table_img[
-                       max(0, min_y1 - offset):max_y2 + offset,
-                       max(0, min_x1 - offset):max_x2 + offset
-                       ]
-
-            # Сохраняем изображение табличной части
-            # all_cropped_images.append(crop_img)
-
-            try:
-                cv2.imwrite('temp/test_2.png', crop_img)
-            except Exception as e:
-                print(f"ERROR: {e}")
-
-    Img.fromarray(table_img).save("temp/test.png")
+    Img.fromarray(table_img).save("temp/test_scaled_4.png")
     # doc_dt.to_xlsx(dest=xlsx_path, ocr=ocr)
     return extracted_data
 
@@ -283,18 +310,6 @@ def data_write_collection(collection: dict, filename: str,
             json.dump(obj=collection, fp=json_file, ensure_ascii=False, indent=3)
     except Exception as e:
         raise Exception(e)
-
-
-def test_pdf_to_image():
-    """
-    Функция для конвертирования из пдф в пнг и обратно. Не нужна, если брать пнг УПД из инета.
-    :return:
-    """
-    Converter.from_pdf_to_png(pdf_path='pdf_appRecognizer/extract_assets/pdf_files/УПД.pdf',
-                              to_save='pdf_appRecognizer/extract_assets/image_files/УПД')
-
-    Converter.from_png_to_pdf(png_path='pdf_appRecognizer/extract_assets/image_files/UPD_1.png',
-                              to_save='pdf_appRecognizer/extract_assets/pdf_files/УПД_1.pdf')
 
 
 def image_extracting(image_file_and_folder: str, image_lang: str, is_tesseract: bool = False,
@@ -385,26 +400,30 @@ def test(is_img_processing: bool = False):
 # test(is_img_processing=True)
 
 
-# input_filename: str = 'temp/test_2.png'
-# output_scaled_4_filename: str = input_filename.replace('test_2.png', 'scaled_4_test_2.png')
-#
-# # upscaled_img_path: str = f'pdf_appRecognizer/extract_assets/image_files/dt_cells/{filename}'
-#
-# # improve_img_quality(img_path=input_filename, output_path=output_scaled_4_filename)
-#
-# cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=2)
-# #
-# upscale_image(path_to_based_img=input_filename,
-#               path_to_upscaled_img=output_scaled_4_filename,
-#               model=cur_model)
+based_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPD_1/UPD_1.png'
 
-data = dt_img2excel(img_path='temp/scaled_4_test_2.png',
-                    xlsx_path='pdf_appRecognizer/extract_assets/xlsx_files/test.xlsx', is_erode=False)
+# detect_datatable_part() возвращает путь до вырезанной табличной части
+dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
+                                    output_filename=based_img_path.replace('UPD_1.png',
+                                                                           'UPD_1_dt_part.png'),
+                                    temp_filename='temp/UPD_1_dt_part.png',
+                                    offset=0,
+                                    is_erode=False)
+
+cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
+# upscale_image() возвращает путь до upscaled_x4 табличного изображения
+dt_upscaled_img = upscale_image(path_to_based_img=dt_img,
+                                path_to_upscaled_img=dt_img.replace('UPD_1_dt_part.png',
+                                                                    'upscaled_4_UPD_1_dt_part.png'),
+                                model=cur_model)
+
+data = dt_img_extracter(img_path=dt_upscaled_img)
+
 print(data)
 dt_collection: dict = {
-    "YPD_2_dt": data
+    "datatable": data
 }
 # Запись извлеченных табличных данных в json.
-DictToJson.write_to_json(collection=dt_collection, path_to_save='temp/temp_dt_jsons/test_2.json')
+DictToJson.write_to_json(collection=dt_collection, path_to_save='temp/temp_dt_jsons/upscaled_4_UPD_1_dt_part_var3.json')
 
 
