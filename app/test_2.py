@@ -69,6 +69,108 @@ load_dotenv()
 # image_pil.show()
 
 
+class TableExtracter:
+    def __init__(self, image_path: str):
+        self.image_path = image_path
+
+        self.dilate_img = None
+        self.contours = None
+        # self.dt_image = None
+        self.rectangular_contours = []
+
+    def image_processing(self):
+        """Обрабатывает изображение: преобразует в черно-белое, инвертирует и проводит морфологические операции."""
+        # Считываем изображение и преобразуем в np.array
+        img = cv2.imread(filename=self.image_path)
+        if img is None:
+            raise ValueError(f"Не удалось загрузить изображение из {self.image_path}")
+
+        # Делаем серым
+        gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+        # Уменьшаем изображение до черных и белых пикселей (порог)
+        thresh_hold_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        # Инвертируем изображения для последующих операций
+        inverted_image = cv2.bitwise_not(thresh_hold_img)
+
+        # Удаление шумов и морфологические операции
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+        denoised_image = cv2.morphologyEx(inverted_image, cv2.MORPH_CLOSE, kernel)
+        denoised_image = cv2.morphologyEx(denoised_image, cv2.MORPH_OPEN, kernel)
+
+        # Уплотняем контуры
+        self.dilate_img = cv2.dilate(denoised_image, None, iterations=1)
+        return self.dilate_img
+
+    def find_contours(self, is_debugging: bool = True):
+        contours, _ = cv2.findContours(self.dilate_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        if is_debugging:
+            img = cv2.imread(filename=self.image_path)
+            gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+
+            image_with_all_contours = gray_img.copy()
+            cv2.drawContours(image_with_all_contours, contours, -1, (0, 255, 0), 2)
+            cv2.imwrite(filename='temp/test_2.png', img=image_with_all_contours)
+
+        self.contours = contours
+        return self.contours
+
+    def filter_contours_and_leave_only_rectangles(self, is_debugging: bool = True):
+        for contour in self.contours:
+            peri = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+
+            if len(approx) == 4:
+                self.rectangular_contours.append(approx)
+
+        if is_debugging:
+            image_with_only_rectangular_contours = gray_img.copy()
+            cv2.drawContours(image_with_only_rectangular_contours, self.rectangular_contours, -1, (0, 255, 0), 3)
+            cv2.imwrite(filename='temp/test_3.png', img=image_with_only_rectangular_contours)
+
+        return self.rectangular_contours
+
+    def crop_rectangles_to_single_image(self, rectangles, min_area=4000, is_debugging: bool = True):
+        img = cv2.imread(filename=self.image_path)
+
+        debug_image = None
+        if is_debugging:
+            debug_image = img.copy()
+
+        # Инициализация крайних координат
+        min_x, min_y = float('inf'), float('inf')
+        max_x, max_y = float('-inf'), float('-inf')
+
+        # Обработка прямоугольников для нахождения крайних точек
+        for rect in rectangles:
+            x, y, w, h = cv2.boundingRect(rect)
+            area = w * h
+            if area >= min_area:
+                # Обновляем крайние координаты
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x + w)
+                max_y = max(max_y, y + h)
+
+                if is_debugging:
+                    # Рисуем прямоугольник на отладочном изображении
+                    cv2.rectangle(debug_image, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+        # Проверка, были ли найдены подходящие прямоугольники
+        if min_x == float('inf') or min_y == float('inf') or max_x == float('-inf') or max_y == float('-inf'):
+            raise ValueError("Не найдено ни одного подходящего прямоугольника с достаточной площадью.")
+
+        # Обрезаем изображение по найденным крайним координатам
+        cropped_image = img[min_y:max_y, min_x:max_x]
+
+        if is_debugging:
+            cv2.rectangle(debug_image, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)  # Рисуем общий прямоугольник
+            cv2.imwrite(filename='temp/test_combined.png', img=debug_image)
+
+        return cropped_image
+
+
+
 test_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/76.jpg'
 test_img = cv2.imread(filename=test_img_path)
 # Шаг 1 - делаем серым
