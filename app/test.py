@@ -160,7 +160,6 @@ def upscale_img_ver2(path_to_based_img: str, path_to_upscaled_img: str, model: t
 def detect_datatable_part(ypd_img_path: str, output_filename: str, temp_filename: str, offset: int = 0,
                           is_erode: bool = True) -> str:
     ocr_detector = EasyOCR(lang=['ru'])
-
     # Создаем экземпляр класса документ
     doc_dt = Image(src=ypd_img_path)
     extracted_tables = doc_dt.extract_tables(ocr=ocr_detector)
@@ -219,6 +218,7 @@ def dt_img_extracter(img_path: str, offset: int = 3, is_cell_remove: bool = True
     :return:
     """
     ocr = EasyOCR(lang=['ru'])
+    print(ocr.reader.readtext(image=img_path))
 
     # Создаем экземпляр класса документ
     doc_dt = Image(src=img_path)
@@ -400,30 +400,31 @@ def test(is_img_processing: bool = False):
 # test(is_img_processing=True)
 
 
-based_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPD_1/UPD_1.png'
+based_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/76.jpg'
 
-# detect_datatable_part() возвращает путь до вырезанной табличной части
 dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
-                                    output_filename=based_img_path.replace('UPD_1.png',
-                                                                           'UPD_1_dt_part.png'),
-                                    temp_filename='temp/UPD_1_dt_part.png',
+                                    output_filename=based_img_path.replace('34.jpg',
+                                                                           '34_dt_part.jpg'),
+                                    temp_filename='temp/test_34_dt_part.jpg',
                                     offset=0,
                                     is_erode=False)
 
-cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
-# upscale_image() возвращает путь до upscaled_x4 табличного изображения
-dt_upscaled_img = upscale_image(path_to_based_img=dt_img,
-                                path_to_upscaled_img=dt_img.replace('UPD_1_dt_part.png',
-                                                                    'upscaled_4_UPD_1_dt_part.png'),
-                                model=cur_model)
+# cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
+# # upscale_image() возвращает путь до upscaled_x4 табличного изображения
+# dt_upscaled_img = upscale_image(path_to_based_img=dt_img,
+#                                 path_to_upscaled_img=dt_img.replace('26_dt_part.jpg',
+#                                                                     'upscaled_4_26_dt_part.jpg'),
+#                                 model=cur_model)
+#
+# data = dt_img_extracter(img_path='temp/26_dt_part.jpg')
 
-data = dt_img_extracter(img_path=dt_upscaled_img)
-
-print(data)
-dt_collection: dict = {
-    "datatable": data
-}
-# Запись извлеченных табличных данных в json.
-DictToJson.write_to_json(collection=dt_collection, path_to_save='temp/temp_dt_jsons/upscaled_4_UPD_1_dt_part_var3.json')
+# print(data)
+# dt_collection: dict = {
+#     "datatable": data
+# }
+# # Запись извлеченных табличных данных в json.
+# DictToJson.write_to_json(collection=dt_collection, path_to_save='temp/temp_dt_jsons/upscaled_4_26_dt_part.json')
 
 
+# detect_dt_part(input_img=temp, output_img=temp.replace('test_3.png', 'test_5.png'))
+# improve_img_quality(img_path='temp/24.png', output_path='temp/24_ver2.png', sharpness=10, contrast=1)
