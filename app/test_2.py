@@ -1,4 +1,5 @@
 import cv2
+import os
 
 from dotenv import load_dotenv
 from img2table.document import Image
@@ -115,10 +116,10 @@ class TableExtracter:
         self.contours = contours
         return self.contours
 
-    def filter_contours_and_leave_only_rectangles(self, is_debugging: bool = True):
+    def filter_contours_and_leave_only_rectangles(self, index: float, is_debugging: bool = True):
         for contour in self.contours:
             peri = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+            approx = cv2.approxPolyDP(contour, index * peri, True)
 
             if len(approx) == 4:
                 self.rectangular_contours.append(approx)
@@ -170,30 +171,37 @@ class TableExtracter:
         return cropped_image
 
 
+def cropped_based_img(input_file: str, output_file: str):
+    img = cv2.imread(filename=input_file)
+    height_img = img.shape[0]
 
-test_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/76.jpg'
-test_img = cv2.imread(filename=test_img_path)
-# Шаг 1 - делаем серым
-gray_img = cv2.cvtColor(src=test_img, code=cv2.COLOR_BGR2GRAY)
-# Шаг 2 - Уменьшаем изображение доа черных и белых пикселей (порог от белого до черного пикселя)
-thresh_hold_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-# Шаг 3 - Инвертируем изображения для последующих операций
-inverted_image = cv2.bitwise_not(thresh_hold_img)
-# Шаг 4 - С помощью методов dilate и erode происходит утолщение всех линий. Поможет определить контуры далее.
-# erode_image = cv2.erode(inverted_image, None, iterations=1)
+    # Определение высоты для обрезки (верхняя половина)
+    y1 = round(height_img - height_img * 0.75)
+    # Определение высоты для обрезки (нижняя половина)
+    y2 = round(height_img * 0.75)
 
-blurred_image = cv2.GaussianBlur(inverted_image, (1, 1), 0)
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+    # print(img.shape, height_img, sep='\n')
 
-denoised_image = cv2.morphologyEx(blurred_image, cv2.MORPH_CLOSE, kernel)
-denoised_image = cv2.morphologyEx(denoised_image, cv2.MORPH_OPEN, kernel)
-
-dilated_image = cv2.dilate(denoised_image, None, iterations=1)
-
-cv2.imwrite(filename='temp/test.png', img=dilated_image)
+    cropped_img = img[y1:y2, :]
+    cv2.imwrite(filename=output_file, img=cropped_img)
 
 
-# Шаг 5 - Находим все контуры из dilate_image и переносим на базовое изображение
+def cropped_img_files(folder_path: str):
+    for img_file in os.listdir(path=folder_path):
+        output_file_name: str = ''
+
+        if img_file.endswith('.png'):
+            output_file_name = f'{img_file.replace('.png', '')}_cropped.png'
+        if img_file.endswith('.jpg'):
+            output_file_name = f'{img_file.replace('.jpg', '')}_cropped.jpg'
+
+        cropped_based_img(input_file=f'{folder_path}{img_file}', output_file=f'{folder_path}{output_file_name}')
+
+
+# curr_folder_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/'
+# cropped_img_files(folder_path=curr_folder_path)
+
+
 def find_contours(dilated_img, is_debugging: bool = True):
     local_dilated_image = dilated_img
     cur_contours, cur_hierarchy = cv2.findContours(local_dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -206,15 +214,12 @@ def find_contours(dilated_img, is_debugging: bool = True):
     return cur_contours, cur_hierarchy
 
 
-img_contours, _ = find_contours(dilated_img=dilated_image)
-
-
 def filter_contours_and_leave_only_rectangles(contours, is_debugging: bool = True):
     rectangular_contours = []
 
     for contour in contours:
         peri = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+        approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
 
         if len(approx) == 4:
             rectangular_contours.append(approx)
@@ -226,10 +231,7 @@ def filter_contours_and_leave_only_rectangles(contours, is_debugging: bool = Tru
     return rectangular_contours
 
 
-cur_rectangular_contours = filter_contours_and_leave_only_rectangles(contours=img_contours)
-
-
-def crop_rectangles_to_single_image(image_path, rectangles, min_area=4000, is_debugging: bool = True):
+def crop_rectangles_to_single_image(image_path, rectangles, min_area=3000, is_debugging: bool = True):
     # Читаем изображение из файла
     img = cv2.imread(filename=image_path)
 
@@ -274,12 +276,36 @@ def crop_rectangles_to_single_image(image_path, rectangles, min_area=4000, is_de
     return cropped_image
 
 
-dt_image = crop_rectangles_to_single_image(image_path='pdf_appRecognizer/extract_assets/image_files/YPDs/trash/76.jpg',
-                                           rectangles=cur_rectangular_contours)
+test_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/77_cropped.jpg'
+test_img = cv2.imread(filename=test_img_path)
+# Шаг 1 - делаем серым
+gray_img = cv2.cvtColor(src=test_img, code=cv2.COLOR_BGR2GRAY)
+# Шаг 2 - Уменьшаем изображение доа черных и белых пикселей (порог от белого до черного пикселя)
+thresh_hold_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+# Шаг 3 - Инвертируем изображения для последующих операций
+inverted_image = cv2.bitwise_not(thresh_hold_img)
+# Шаг 4 - С помощью методов dilate и erode происходит утолщение всех линий. Поможет определить контуры далее.
+# erode_image = cv2.erode(inverted_image, None, iterations=1)
+
+blurred_image = cv2.GaussianBlur(inverted_image, (1, 1), 0)
+kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+
+denoised_image = cv2.morphologyEx(blurred_image, cv2.MORPH_CLOSE, kernel)
+denoised_image = cv2.morphologyEx(denoised_image, cv2.MORPH_OPEN, kernel)
+
+# dilated_image = cv2.dilate(denoised_image, None, iterations=1)
+
+cv2.imwrite(filename='temp/test.png', img=denoised_image)
+
+# Находим контуры
+img_contours, _ = find_contours(dilated_img=denoised_image)
+# Из найденных контуров извлекаем только прямоугольники
+cur_rectangular_contours = filter_contours_and_leave_only_rectangles(contours=img_contours)
+# Найденные прямоугольники накладываем на базовое изображение
+dt_image = crop_rectangles_to_single_image(image_path='pdf_appRecognizer/extract_assets/image_files/YPDs/trash/77_cropped.jpg',
+                                           rectangles=cur_rectangular_contours,
+                                           min_area=4000)
 cv2.imwrite(filename='temp/test_5.png', img=dt_image)
 
-# binary = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
-#                                35, -5)
-# Show pictures
-# cv2.imshow("binary_picture", gray_img)
-# cv2.imwrite(filename='temp/test.png', img=gray_img)
+binary = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
+                               35, -5)
