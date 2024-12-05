@@ -81,6 +81,113 @@ class ImageDataExtracter:
         return text[:-1]
 
 
+class ImageTableExtracter:
+    def __init__(self, image_path: str):
+        self.image_path = image_path
+
+        self.denoised_image = None
+        self.contours = None
+        self.dt_image = None
+        self.rectangular_contours = []
+
+    def image_processing(self):
+        """Обрабатывает изображение: преобразует в черно-белое, инвертирует и проводит морфологические операции."""
+        # Считываем изображение и преобразуем в np.array
+        img = cv2.imread(filename=self.image_path)
+        if img is None:
+            raise ValueError(f"Не удалось загрузить изображение из {self.image_path}")
+
+        # Делаем серым
+        gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+        # Уменьшаем изображение до черных и белых пикселей (порог)
+        thresh_hold_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        # Инвертируем изображения для последующих операций
+        inverted_image = cv2.bitwise_not(thresh_hold_img)
+
+        # Удаление шумов и морфологические операции
+        blurred_image = cv2.GaussianBlur(inverted_image, (1, 1), 0)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+
+        denoised_image = cv2.morphologyEx(blurred_image, cv2.MORPH_CLOSE, kernel)
+        denoised_image = cv2.morphologyEx(denoised_image, cv2.MORPH_OPEN, kernel)
+
+        cv2.imwrite(filename='../../temp/test.png', img=denoised_image)
+        self.denoised_image = cv2.dilate(denoised_image, None, iterations=1)
+        # return self.dilate_img
+
+    def find_contours(self, is_debugging: bool = True):
+        contours, _ = cv2.findContours(self.denoised_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        if is_debugging:
+            img = cv2.imread(filename=self.image_path)
+            gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+
+            image_with_all_contours = gray_img.copy()
+            cv2.drawContours(image_with_all_contours, contours, -1, (0, 255, 0), 2)
+            cv2.imwrite(filename='../../temp/test_2.png', img=image_with_all_contours)
+
+        self.contours = contours
+        # return self.contours
+
+    def filter_contours_and_leave_only_rectangles(self, index: float, is_debugging: bool = True):
+        for contour in self.contours:
+            peri = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, index * peri, True)
+
+            if len(approx) == 4:
+                self.rectangular_contours.append(approx)
+
+        if is_debugging:
+            img = cv2.imread(filename=self.image_path)
+            gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+
+            image_with_only_rectangular_contours = gray_img.copy()
+            cv2.drawContours(image_with_only_rectangular_contours, self.rectangular_contours, -1, (0, 255, 0), 3)
+            cv2.imwrite(filename='../../temp/test_3.png', img=image_with_only_rectangular_contours)
+
+        return self.rectangular_contours
+
+    def crop_rectangles_to_single_image(self, rectangles, min_area=4000, is_debugging: bool = True):
+        img = cv2.imread(filename=self.image_path)
+
+        debug_image = None
+        if is_debugging:
+            debug_image = img.copy()
+
+        # Инициализация крайних координат
+        min_x, min_y = float('inf'), float('inf')
+        max_x, max_y = float('-inf'), float('-inf')
+
+        # Обработка прямоугольников для нахождения крайних точек
+        for rect in rectangles:
+            x, y, w, h = cv2.boundingRect(rect)
+            area = w * h
+            if area >= min_area:
+                # Обновляем крайние координаты
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x + w)
+                max_y = max(max_y, y + h)
+
+                if is_debugging:
+                    # Рисуем прямоугольник на отладочном изображении
+                    cv2.rectangle(debug_image, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+        # Проверка, были ли найдены подходящие прямоугольники
+        if min_x == float('inf') or min_y == float('inf') or max_x == float('-inf') or max_y == float('-inf'):
+            raise ValueError("Не найдено ни одного подходящего прямоугольника с достаточной площадью.")
+
+        # Обрезаем изображение по найденным крайним координатам
+        cropped_image = img[min_y:max_y, min_x:max_x]
+
+        if is_debugging:
+            cv2.rectangle(debug_image, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)  # Рисуем общий прямоугольник
+            cv2.imwrite(filename='../../temp/test_combined.png', img=debug_image)
+
+        self.dt_image = cropped_image
+        # return self.dt_image
+
+
 def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, contrast: float = 1.3,
                         blur: int = 1) -> None:
     """
@@ -97,12 +204,14 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
 
     # Загружаем изображение
     img = cv2.imread(img_path)
+    # Уплотняем шрифт
+    img = cv2.erode(src=img, kernel=np.ones((2, 2)), iterations=1)
 
-    # Придаем серый оттеннок
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # Придаем серый оттеннок для лучшего распознавания TesseractOCR
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # конвертируем image в PIL Image
-    pil_img = Img.fromarray(img)
+    pil_img = Img.fromarray(gray_img)
 
     # Увеличиваем резкость изображения
     enhancer = ImageEnhance.Sharpness(pil_img)
@@ -120,10 +229,11 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
 
     # Конвертируем в PIL Image (Im) и сохраняем
     img_enhanced = Img.fromarray(img_enhanced)
+    img_enhanced.show()
     img_enhanced.save(output_path)
 
 
-def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torch.nn.Module) -> None:
+def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torch.nn.Module) -> str:
     """
     Функция апскейла (улучшение качества изображения/увеличение разрашения изображения)
     :param path_to_based_img: Путь до изображения, которое будем улучшать
@@ -132,42 +242,43 @@ def upscale_image(path_to_based_img: str, path_to_upscaled_img: str, model: torc
     :return: None
     """
 
-    # Если есть видеокарта, то использует ее вместо процессора
     cur_device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
     model = model.to(cur_device)
 
-    img = np.array(Img.open(path_to_based_img), dtype=np.float32) / 255.0
-    img = img[:, :, 0:3]
+    # Конвертация обратно в "RGB" для создания 3-измерения (модель прогоняет только их)
+    img = np.array(Img.open(path_to_based_img).convert("RGB"), dtype=np.float32) / 255.0
 
     tile_count_x: int = 16
     tile_count_y: int = 16
 
-    m = img.shape[0] // tile_count_x
-    n = img.shape[1] // tile_count_y
-
-    tiles = [[img[x:x + m, y:y + n] for x in range(0, img.shape[0], m)] for y in range(0, img.shape[1], n)]
-    inputs = [[torch.from_numpy(tile).permute(2, 0, 1).unsqueeze(0).to(cur_device) for tile in part] for part in tiles]
-
     upscaled = None
     count: int = 0
 
-    for i in range(tile_count_y + 1):
-        col = None
-        for j in range(tile_count_x + 1):
-            pred = model(inputs[i][j])
-            res = pred.detach().to('cpu').squeeze(0).permute(1, 2, 0)
-            # print(f"Image tile #{count}. Upscaled shape: {res.shape}")
-            count += 1
-            col = res if col is None else torch.cat([col, res], dim=0)
-            del pred
-        upscaled = col if upscaled is None else torch.cat([upscaled, col], dim=1)
+    # Проверка 3-мерный массив
+    if len(img.shape) == 3:
+        img = img[:, :, 0:3]
 
+        m = img.shape[0] // tile_count_x
+        n = img.shape[1] // tile_count_y
+
+        tiles = [[img[x:x + m, y:y + n] for x in range(0, img.shape[0], m)] for y in range(0, img.shape[1], n)]
+        inputs = [[torch.from_numpy(tile).permute(2, 0, 1).unsqueeze(0).to(cur_device) for tile in part] for part in
+                  tiles]
+        for i in range(tile_count_y):
+            col = None
+            for j in range(tile_count_x):
+                pred = model(inputs[i][j])
+                res = pred.detach().to('cpu').squeeze(0).permute(1, 2, 0)
+                # print(f"Image tile #{count}. Upscaled shape: {res.shape}")
+                count += 1
+                col = res if col is None else torch.cat([col, res], dim=0)
+                del pred
+            upscaled = col if upscaled is None else torch.cat([upscaled, col], dim=1)
     # Сохраняем итоговое изображение
-    cv2.imwrite(fr'pdf_appRecognizer/extract_assets/image_files/{path_to_upscaled_img}',
-                upscaled.numpy() * 255.0)
-
+    cv2.imwrite(path_to_upscaled_img, upscaled.numpy() * 255.0)
     torch.cuda.empty_cache()
+
+    return path_to_upscaled_img
 
 
 # Get the list of available languages
@@ -176,4 +287,23 @@ def tesseract_languages(path_to_tesseract: str) -> list[str]:
     pytesseract.pytesseract.tesseract_cmd: str = path_to_tesseract
     languages: list[str] = pytesseract.get_languages()
     return languages
+
+
+def test():
+    test_img_path: str = f'../extract_assets/image_files/YPDs/trash/24_cropped.png'
+    # Пред обработка
+    improve_img_quality(img_path=test_img_path, output_path=test_img_path, sharpness=14, contrast=3, blur=1)
+    img_instance = ImageTableExtracter(image_path=test_img_path)
+
+    # Обрабатываем до стадии dilate
+    img_instance.image_processing()
+    # Затем находим контуры в dilate_image
+    img_instance.find_contours()
+    # Из найденных контуров берем только прямоугольники
+    rectangular_contours = img_instance.filter_contours_and_leave_only_rectangles(index=0.01)
+    # Обрезаем до табличной части
+    img_instance.crop_rectangles_to_single_image(rectangles=rectangular_contours)
+
+
+# test()
 
