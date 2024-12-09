@@ -85,22 +85,24 @@ class ImageTableExtracter:
     def __init__(self, image_path: str):
         self.image_path = image_path
 
+        self.gray_img = None
         self.denoised_image = None
         self.contours = None
-        self.dt_image = None
+        # self.dt_image = None
         self.rectangular_contours = []
 
-    def image_processing(self):
+    def image_processing(self, is_debugging: bool = True):
         """Обрабатывает изображение: преобразует в черно-белое, инвертирует и проводит морфологические операции."""
         # Считываем изображение и преобразуем в np.array
         img = cv2.imread(filename=self.image_path)
+
         if img is None:
             raise ValueError(f"Не удалось загрузить изображение из {self.image_path}")
 
         # Делаем серым
-        gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+        self.gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
         # Уменьшаем изображение до черных и белых пикселей (порог)
-        thresh_hold_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        thresh_hold_img = cv2.threshold(self.gray_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
         # Инвертируем изображения для последующих операций
         inverted_image = cv2.bitwise_not(thresh_hold_img)
 
@@ -109,20 +111,20 @@ class ImageTableExtracter:
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
 
         denoised_image = cv2.morphologyEx(blurred_image, cv2.MORPH_CLOSE, kernel)
-        denoised_image = cv2.morphologyEx(denoised_image, cv2.MORPH_OPEN, kernel)
+        self.denoised_image = cv2.morphologyEx(denoised_image, cv2.MORPH_OPEN, kernel)
 
-        cv2.imwrite(filename='../../temp/test.png', img=denoised_image)
-        self.denoised_image = cv2.dilate(denoised_image, None, iterations=1)
-        # return self.dilate_img
+        # Уплотняем контуры
+
+        if is_debugging:
+            cv2.imwrite(filename='../../temp/test.png', img=self.denoised_image)
+
+        # return self.denoised_image
 
     def find_contours(self, is_debugging: bool = True):
         contours, _ = cv2.findContours(self.denoised_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         if is_debugging:
-            img = cv2.imread(filename=self.image_path)
-            gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
-
-            image_with_all_contours = gray_img.copy()
+            image_with_all_contours = self.gray_img.copy()
             cv2.drawContours(image_with_all_contours, contours, -1, (0, 255, 0), 2)
             cv2.imwrite(filename='../../temp/test_2.png', img=image_with_all_contours)
 
@@ -138,16 +140,13 @@ class ImageTableExtracter:
                 self.rectangular_contours.append(approx)
 
         if is_debugging:
-            img = cv2.imread(filename=self.image_path)
-            gray_img = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
-
-            image_with_only_rectangular_contours = gray_img.copy()
+            image_with_only_rectangular_contours = self.gray_img.copy()
             cv2.drawContours(image_with_only_rectangular_contours, self.rectangular_contours, -1, (0, 255, 0), 3)
             cv2.imwrite(filename='../../temp/test_3.png', img=image_with_only_rectangular_contours)
 
         return self.rectangular_contours
 
-    def crop_rectangles_to_single_image(self, rectangles, min_area=4000, is_debugging: bool = True):
+    def crop_rectangles_to_single_image(self, min_area=4000, is_debugging: bool = True):
         img = cv2.imread(filename=self.image_path)
 
         debug_image = None
@@ -159,7 +158,7 @@ class ImageTableExtracter:
         max_x, max_y = float('-inf'), float('-inf')
 
         # Обработка прямоугольников для нахождения крайних точек
-        for rect in rectangles:
+        for rect in self.rectangular_contours:
             x, y, w, h = cv2.boundingRect(rect)
             area = w * h
             if area >= min_area:
@@ -184,11 +183,11 @@ class ImageTableExtracter:
             cv2.rectangle(debug_image, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)  # Рисуем общий прямоугольник
             cv2.imwrite(filename='../../temp/test_combined.png', img=debug_image)
 
-        self.dt_image = cropped_image
-        # return self.dt_image
+        cv2.imwrite(filename='../../temp/test_4.png', img=cropped_image)
+        # return cropped_image
 
 
-def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, contrast: float = 1.3,
+def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, contrast: float = 0.7,
                         blur: int = 1) -> None:
     """
     Функция улучшения качества изображения. Ненамного, ну качество улучшает
@@ -322,7 +321,7 @@ def test(is_already_cropped: bool = True):
     if is_already_cropped:
         cropped_img_files(folder_path=folder_path)
 
-    img_filename: str = '77_cropped.jpg'
+    img_filename: str = '24_cropped.png'
 
     improve_img_quality(img_path=f'{folder_path}/{img_filename}', output_path=f'{folder_path}/{img_filename}',
                         sharpness=14, contrast=3, blur=1)
