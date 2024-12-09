@@ -289,21 +289,52 @@ def tesseract_languages(path_to_tesseract: str) -> list[str]:
     return languages
 
 
-def test():
-    test_img_path: str = f'../extract_assets/image_files/YPDs/trash/24_cropped.png'
-    # Пред обработка
-    improve_img_quality(img_path=test_img_path, output_path=test_img_path, sharpness=14, contrast=3, blur=1)
-    img_instance = ImageTableExtracter(image_path=test_img_path)
+def cropped_based_img(input_file: str, output_file: str):
+    img = cv2.imread(filename=input_file)
+    height_img = img.shape[0]
 
-    # Обрабатываем до стадии dilate
+    # Определение высоты для обрезки (верхняя половина)
+    y1 = round(height_img - height_img * 0.75)
+    # Определение высоты для обрезки (нижняя половина)
+    y2 = round(height_img * 0.75)
+
+    # print(img.shape, height_img, sep='\n')
+
+    cropped_img = img[y1:y2, :]
+    cv2.imwrite(filename=output_file, img=cropped_img)
+
+
+def cropped_img_files(folder_path: str):
+    for img_file in os.listdir(path=folder_path):
+        output_file_name: str = ''
+
+        if img_file.endswith('.png'):
+            output_file_name = f'{img_file.replace('.png', '')}_cropped.png'
+        if img_file.endswith('.jpg'):
+            output_file_name = f'{img_file.replace('.jpg', '')}_cropped.jpg'
+
+        cropped_based_img(input_file=f'{folder_path}{img_file}', output_file=f'{folder_path}{output_file_name}')
+
+
+def test(is_already_cropped: bool = True):
+    folder_path: str = '../extract_assets/image_files/YPDs/trash/'
+
+    if is_already_cropped:
+        cropped_img_files(folder_path=folder_path)
+
+    img_filename: str = '77_cropped.jpg'
+
+    improve_img_quality(img_path=f'{folder_path}/{img_filename}', output_path=f'{folder_path}/{img_filename}',
+                        sharpness=14, contrast=3, blur=1)
+
+    img_instance = ImageTableExtracter(image_path=f'{folder_path}/{img_filename}')
+
     img_instance.image_processing()
-    # Затем находим контуры в dilate_image
     img_instance.find_contours()
-    # Из найденных контуров берем только прямоугольники
-    rectangular_contours = img_instance.filter_contours_and_leave_only_rectangles(index=0.01)
-    # Обрезаем до табличной части
-    img_instance.crop_rectangles_to_single_image(rectangles=rectangular_contours)
+
+    img_instance.filter_contours_and_leave_only_rectangles(index=0.01)
+    img_instance.crop_rectangles_to_single_image()
 
 
-# test()
+test(is_already_cropped=False)
 
