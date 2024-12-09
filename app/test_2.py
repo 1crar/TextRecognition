@@ -198,12 +198,12 @@ def cropped_img_files(folder_path: str):
         cropped_based_img(input_file=f'{folder_path}{img_file}', output_file=f'{folder_path}{output_file_name}')
 
 
-curr_folder_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/'
-cropped_img_files(folder_path=curr_folder_path)
+# curr_folder_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/'
+# cropped_img_files(folder_path=curr_folder_path)
 
 
-def find_contours(denoised_img, is_debugging: bool = True):
-    local_dilated_image = denoised_img
+def find_contours(dilated_img, is_debugging: bool = True):
+    local_dilated_image = dilated_img
     cur_contours, cur_hierarchy = cv2.findContours(local_dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     if is_debugging:
@@ -276,7 +276,7 @@ def crop_rectangles_to_single_image(image_path, rectangles, min_area=3000, is_de
     return cropped_image
 
 
-test_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
+test_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/77_cropped.jpg'
 test_img = cv2.imread(filename=test_img_path)
 # Шаг 1 - делаем серым
 gray_img = cv2.cvtColor(src=test_img, code=cv2.COLOR_BGR2GRAY)
@@ -298,11 +298,14 @@ denoised_image = cv2.morphologyEx(denoised_image, cv2.MORPH_OPEN, kernel)
 cv2.imwrite(filename='temp/test.png', img=denoised_image)
 
 # Находим контуры
-img_contours, _ = find_contours(denoised_img=denoised_image)
+img_contours, _ = find_contours(dilated_img=denoised_image)
 # Из найденных контуров извлекаем только прямоугольники
 cur_rectangular_contours = filter_contours_and_leave_only_rectangles(contours=img_contours)
 # Найденные прямоугольники накладываем на базовое изображение
 dt_image = crop_rectangles_to_single_image(image_path='pdf_appRecognizer/extract_assets/image_files/YPDs/trash/77_cropped.jpg',
                                            rectangles=cur_rectangular_contours,
                                            min_area=4000)
-cv2.imwrite(filename='temp/test_4.png', img=dt_image)
+cv2.imwrite(filename='temp/test_5.png', img=dt_image)
+
+binary = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
+                               35, -5)
