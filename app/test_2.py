@@ -276,7 +276,7 @@ def crop_rectangles_to_single_image(image_path, rectangles, min_area=3000, is_de
     return cropped_image
 
 
-test_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
+test_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/77_cropped.jpg'
 test_img = cv2.imread(filename=test_img_path)
 # Шаг 1 - делаем серым
 gray_img = cv2.cvtColor(src=test_img, code=cv2.COLOR_BGR2GRAY)
@@ -302,10 +302,10 @@ img_contours, _ = find_contours(dilated_img=denoised_image)
 # Из найденных контуров извлекаем только прямоугольники
 cur_rectangular_contours = filter_contours_and_leave_only_rectangles(contours=img_contours)
 # Найденные прямоугольники накладываем на базовое изображение
-dt_image = crop_rectangles_to_single_image(image_path='pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png',
+dt_image = crop_rectangles_to_single_image(image_path='pdf_appRecognizer/extract_assets/image_files/YPDs/trash/77_cropped.jpg',
                                            rectangles=cur_rectangular_contours,
                                            min_area=4000)
 cv2.imwrite(filename='temp/test_4.png', img=dt_image)
 
-# binary = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
-#                                35, -5)
+binary = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
+                               35, -5)

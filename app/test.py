@@ -49,12 +49,7 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
     img = cv2.erode(src=img, kernel=np.ones((2, 2)), iterations=1)
 
     # Придаем серый оттеннок для лучшего распознавания TesseractOCR
-    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)         # OR  cv2.COLOR_BGR2GRAY but 2-dimension
-    # print('Shape of gray_img:', gray_img.shape)
-    # print('Type of gray_img:', type(gray_img))
-
-    # Используем метод threshold для преобразования изображения в бинарное (черно-белое) представление
-    # cleared_gray_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY)[1]
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # конвертируем image в PIL Image
     pil_img = Img.fromarray(gray_img)
@@ -428,5 +423,5 @@ def test(is_img_processing: bool = False):
 
 # detect_dt_part(input_img=temp, output_img=temp.replace('test_3.png', 'test_5.png'))
 
-img_path = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
+img_path = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/77_cropped.jpg'
 improve_img_quality(img_path=img_path, output_path=img_path, sharpness=14, contrast=3, blur=1)
