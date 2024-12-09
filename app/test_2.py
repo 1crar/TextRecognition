@@ -314,7 +314,7 @@ def crop_rectangles_to_single_image(image_path, rectangles, min_area=3000, is_de
 # cv2.imwrite(filename='temp/test_4.png', img=dt_image)
 
 
-def test_2():
+def test():
     img_instance = TableExtracter(image_path='pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png')
 
     img_instance.image_processing()
@@ -324,4 +324,4 @@ def test_2():
     img_instance.crop_rectangles_to_single_image()
 
 
-test_2()
+# test()
