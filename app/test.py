@@ -49,12 +49,7 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
     img = cv2.erode(src=img, kernel=np.ones((2, 2)), iterations=1)
 
     # Придаем серый оттеннок для лучшего распознавания TesseractOCR
-    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)         # OR  cv2.COLOR_BGR2GRAY but 2-dimension
-    # print('Shape of gray_img:', gray_img.shape)
-    # print('Type of gray_img:', type(gray_img))
-
-    # Используем метод threshold для преобразования изображения в бинарное (черно-белое) представление
-    # cleared_gray_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY)[1]
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # конвертируем image в PIL Image
     pil_img = Img.fromarray(gray_img)
@@ -400,14 +395,14 @@ def test(is_img_processing: bool = False):
 # test(is_img_processing=True)
 
 
-based_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/76.jpg'
-
-dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
-                                    output_filename=based_img_path.replace('34.jpg',
-                                                                           '34_dt_part.jpg'),
-                                    temp_filename='temp/test_34_dt_part.jpg',
-                                    offset=0,
-                                    is_erode=False)
+# based_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/76.jpg'
+#
+# dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
+#                                     output_filename=based_img_path.replace('34.jpg',
+#                                                                            '34_dt_part.jpg'),
+#                                     temp_filename='temp/test_34_dt_part.jpg',
+#                                     offset=0,
+#                                     is_erode=False)
 
 # cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
 # # upscale_image() возвращает путь до upscaled_x4 табличного изображения
@@ -427,4 +422,6 @@ dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
 
 
 # detect_dt_part(input_img=temp, output_img=temp.replace('test_3.png', 'test_5.png'))
-# improve_img_quality(img_path='temp/24.png', output_path='temp/24_ver2.png', sharpness=10, contrast=1)
+
+img_path = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
+improve_img_quality(img_path=img_path, output_path=img_path, sharpness=14, contrast=3, blur=1)
