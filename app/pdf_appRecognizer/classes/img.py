@@ -11,13 +11,13 @@ from dotenv import load_dotenv
 from PIL import Image as Img
 from PIL import ImageEnhance
 
-
 load_dotenv()
 TESSERACT_OCR: str = os.getenv('TESSERACT')
 
 
 class Image:
     "Old version of image extraction"
+
     def __init__(self, _path_dir: str, exe_file: str):
         self._path_dir = _path_dir
         self.exe_file = exe_file
@@ -34,6 +34,7 @@ class ImageDataExtracter:
     """
     Current class for extraction data from image
     """
+
     def __init__(self, path_dir: str, image_file: str, path_to_tesseract: str, language: str):
         self._path_dir = path_dir
         self._image_file = image_file
@@ -146,8 +147,8 @@ class ImageTableExtracter:
 
         return self.rectangular_contours
 
-    def crop_rectangles_to_single_image(self, min_area=4000, is_debugging: bool = True):
-        img = cv2.imread(filename=self.image_path)
+    def crop_rectangles_to_single_image(self, dt_coloured_img: str, min_area=4000, is_debugging: bool = True):
+        img = cv2.imread(filename=dt_coloured_img)
 
         debug_image = None
         if is_debugging:
@@ -183,8 +184,8 @@ class ImageTableExtracter:
             cv2.rectangle(debug_image, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)  # Рисуем общий прямоугольник
             cv2.imwrite(filename='../../temp/test_combined.png', img=debug_image)
 
-        cv2.imwrite(filename='../../temp/test_4.png', img=cropped_image)
-        # return cropped_image
+        cv2.imwrite(filename='../../temp/test_4_final_result.png', img=cropped_image)
+        return cropped_image
 
 
 def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, contrast: float = 0.7,
@@ -321,19 +322,102 @@ def test(is_already_cropped: bool = True):
     if is_already_cropped:
         cropped_img_files(folder_path=folder_path)
 
-    img_filename: str = '24_cropped.png'
+    coloured_img_file: str = '24_cropped.png'
+    uncoloured_img_file: str = '24_uncoloured_cropped.png'
 
-    improve_img_quality(img_path=f'{folder_path}/{img_filename}', output_path=f'{folder_path}/{img_filename}',
+    improve_img_quality(img_path=f'{folder_path}/{coloured_img_file}',
+                        output_path=f'{folder_path}/{uncoloured_img_file}',
                         sharpness=14, contrast=3, blur=1)
 
-    img_instance = ImageTableExtracter(image_path=f'{folder_path}/{img_filename}')
+    img_instance = ImageTableExtracter(image_path=f'{folder_path}/{uncoloured_img_file}')
 
     img_instance.image_processing()
     img_instance.find_contours()
 
     img_instance.filter_contours_and_leave_only_rectangles(index=0.01)
-    img_instance.crop_rectangles_to_single_image()
+    # возвращаем не путь до обрезанного изображения, а np.array
+    dt_im = img_instance.crop_rectangles_to_single_image(dt_coloured_img=f'{folder_path}{coloured_img_file}')
+    print(dt_im, sep='\n')
 
 
-test(is_already_cropped=False)
+# test(is_already_cropped=True)
 
+def erode_vertical_lines(inverted_image: np.ndarray) -> np.ndarray:
+    hor = np.array([[1, 1, 1, 1, 1, 1]])
+
+    vertical_lines_eroded_image = cv2.erode(inverted_image, hor, iterations=10)
+    vertical_lines_eroded_image = cv2.dilate(vertical_lines_eroded_image, hor, iterations=10)
+
+    return vertical_lines_eroded_image
+
+
+def erode_horizontal_lines(inverted_image: np.ndarray) -> np.ndarray:
+    ver = np.array([[1],
+                    [1],
+                    [1],
+                    [1],
+                    [1],
+                    [1],
+                    [1]])
+    horizontal_lines_eroded_image = cv2.erode(inverted_image, ver, iterations=10)
+    horizontal_lines_eroded_image = cv2.dilate(horizontal_lines_eroded_image, ver, iterations=10)
+
+    return horizontal_lines_eroded_image
+
+
+def combine_eroded_images(vertical_lines_eroded_image: np.ndarray,
+                          horizontal_lines_eroded_image: np.ndarray) -> np.ndarray:
+    combined_image = cv2.add(vertical_lines_eroded_image, horizontal_lines_eroded_image)
+    return combined_image
+
+
+def dilate_lines_thicker(combined_image: np.ndarray) -> np.ndarray:
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+    combined_image_dilated = cv2.dilate(combined_image, kernel, iterations=3)
+
+    return combined_image_dilated
+
+
+def remove_noise_with_erode_and_dilate(image_without_lines: np.ndarray) -> np.ndarray:
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+
+    image_without_lines_noise_removed = cv2.erode(image_without_lines, kernel, iterations=1)
+    image_without_lines_noise_removed = cv2.dilate(image_without_lines_noise_removed, kernel, iterations=1)
+
+    return image_without_lines_noise_removed
+
+
+def test_2():
+    cur_img_path: str = '../../temp/test_4_final_result.png'
+    cur_img: np.ndarray = cv2.imread(filename=cur_img_path)
+
+    gray_img = cv2.cvtColor(src=cur_img, code=cv2.COLOR_BGR2GRAY)
+    threshold_img = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY)[1]
+    inverted_img = cv2.bitwise_not(src=threshold_img)
+
+    cv2.imwrite(filename='../../temp/test_5_inverted_dt.png', img=inverted_img)
+
+    v_lines_erode_image = erode_vertical_lines(inverted_image=inverted_img)
+    cv2.imwrite(filename='../../temp/test_6_v_eroded_dt.png', img=v_lines_erode_image)
+
+    h_lines_erode_image = erode_horizontal_lines(inverted_image=inverted_img)
+    cv2.imwrite(filename='../../temp/test_7_h_eroded_dt.png', img=h_lines_erode_image)
+
+    combined_lines_image = combine_eroded_images(vertical_lines_eroded_image=v_lines_erode_image,
+                                                 horizontal_lines_eroded_image=h_lines_erode_image)
+    cv2.imwrite(filename='../../temp/test_8_combined_lines_dt.png', img=combined_lines_image)
+
+    dilated_combined_image = dilate_lines_thicker(combined_image=combined_lines_image)
+    cv2.imwrite(filename='../../temp/test_9_combined_lines_dilated_dt.png', img=dilated_combined_image)
+
+    # Убираем линии
+    image_without_lines = cv2.subtract(inverted_img, dilated_combined_image)
+    cv2.imwrite(filename='../../temp/test_10_without_lines_dt.png', img=image_without_lines)
+
+    # Перед denoised мы можем попробовать заапскейлить изображение!!!
+
+    denoised_image = remove_noise_with_erode_and_dilate(image_without_lines=image_without_lines)
+    cv2.imwrite(filename='../../temp/test_11_denoised_dt.png', img=denoised_image)
+
+
+test_2()
