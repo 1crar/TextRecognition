@@ -423,5 +423,6 @@ def test(is_img_processing: bool = False):
 
 # detect_dt_part(input_img=temp, output_img=temp.replace('test_3.png', 'test_5.png'))
 
-img_path = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
-improve_img_quality(img_path=img_path, output_path=img_path, sharpness=14, contrast=3, blur=1)
+# img_path = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
+# improve_img_quality(img_path=img_path, output_path=img_path.replace('24_cropped.png', '24_uncoloured_cropped.png'),
+#                     sharpness=14, contrast=3, blur=1)

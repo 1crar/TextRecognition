@@ -135,8 +135,8 @@ class TableExtracter:
 
         return self.rectangular_contours
 
-    def crop_rectangles_to_single_image(self, min_area=4000, is_debugging: bool = True):
-        img = cv2.imread(filename=self.image_path)
+    def crop_rectangles_to_single_image(self, dt_coloured_img: str, min_area=4000, is_debugging: bool = True):
+        img = cv2.imread(filename=dt_coloured_img)
 
         debug_image = None
         if is_debugging:
@@ -315,13 +315,19 @@ def crop_rectangles_to_single_image(image_path, rectangles, min_area=3000, is_de
 
 
 def test():
-    img_instance = TableExtracter(image_path='pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png')
+    img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/'
+    coloured_img_file: str = '24_cropped.png'
+    uncoloured_img_file: str = '24_uncoloured_cropped.png'
+
+    img_instance = TableExtracter(image_path=f'{img_path}{uncoloured_img_file}')
 
     img_instance.image_processing()
     img_instance.find_contours()
 
     img_instance.filter_contours_and_leave_only_rectangles(index=0.01)
-    img_instance.crop_rectangles_to_single_image()
+    # возвращаем не путь до обрезанного изображения, а np.array
+    dt_image = img_instance.crop_rectangles_to_single_image(dt_coloured_img=f'{img_path}{coloured_img_file}')
+    print(dt_image, type(dt_image), sep='\n')
 
 
 # test()
