@@ -1,15 +1,20 @@
+from typing import Any, Sequence
+
 import cv2
 import os
 import pytesseract
 import time
 import torch
+import subprocess
 
 import numpy as np
 import pandas as pd
+from cv2 import Mat
 
 from dotenv import load_dotenv
 from PIL import Image as Img
 from PIL import ImageEnhance
+from numpy import ndarray, dtype
 
 load_dotenv()
 TESSERACT_OCR: str = os.getenv('TESSERACT')
@@ -379,7 +384,7 @@ def dilate_lines_thicker(combined_image: np.ndarray) -> np.ndarray:
 
 
 def remove_noise_with_erode_and_dilate(image_without_lines: np.ndarray) -> np.ndarray:
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 
     image_without_lines_noise_removed = cv2.erode(image_without_lines, kernel, iterations=1)
     image_without_lines_noise_removed = cv2.dilate(image_without_lines_noise_removed, kernel, iterations=1)
@@ -387,8 +392,135 @@ def remove_noise_with_erode_and_dilate(image_without_lines: np.ndarray) -> np.nd
     return image_without_lines_noise_removed
 
 
+def dilate_image(denoised_image: np.ndarray) -> np.ndarray:
+    kernel_to_remove_gaps_between_words = np.array([
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    ])
+    dilated_image = cv2.dilate(denoised_image, kernel_to_remove_gaps_between_words, iterations=5)
+    simple_kernel = np.ones((5, 5), np.uint8)
+
+    denoised_dilated_image = cv2.dilate(dilated_image, simple_kernel, iterations=2)
+    return denoised_dilated_image
+
+
+def find_word_contours(denoised_dilated_image: np.ndarray) -> Sequence[ndarray | Any]:
+    result = cv2.findContours(denoised_dilated_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours = result[0]
+
+    return contours
+
+
+def convert_contours_to_bounding_boxes(contours: Sequence[ndarray | Any],
+                                       original_img: np.ndarray) -> Sequence[ndarray | Any]:
+    bounding_boxes = []
+    image_with_all_bounding_boxes = original_img.copy()
+
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        bounding_boxes.append((x, y, w, h))
+
+        # Строки ниже нужны для отладки
+        image_with_all_bounding_boxes = cv2.rectangle(image_with_all_bounding_boxes,
+                                                      (x, y), (x + w, y + h), (0, 255, 0), 2)
+        cv2.imwrite(filename='../../temp/test_14_bounding_boxes.png', img=image_with_all_bounding_boxes)
+
+    return bounding_boxes
+
+
+def get_mean_height_of_bounding_boxes(bounding_boxes: Sequence[ndarray | Any]) -> np.floating:
+    heights = []
+
+    for bounding_box in bounding_boxes:
+        x, y, w, h = bounding_box
+        heights.append(h)
+
+    return np.mean(heights)
+
+
+def sort_bounding_boxes_by_y_coordinate(bounding_boxes: Sequence[ndarray | Any]) -> Sequence[ndarray | Any]:
+    bounding_boxes = sorted(bounding_boxes, key=lambda x: x[1])
+    return bounding_boxes
+
+
+def club_all_bounding_boxes_by_similar_y_coordinates_into_rows(mean_height: np.floating,
+                                                               sorted_bounding_boxes: Sequence[ndarray | Any]) ->\
+        Sequence[ndarray | Any]:
+
+    rows = []
+    half_of_mean_height = mean_height / 2
+    current_row = [sorted_bounding_boxes[0]]
+
+    for bounding_box in sorted_bounding_boxes[1:]:
+        current_bounding_box_y = bounding_box[1]
+        previous_bounding_box_y = current_row[-1][1]
+        distance_between_bounding_boxes = abs(current_bounding_box_y - previous_bounding_box_y)
+
+        if distance_between_bounding_boxes <= half_of_mean_height:
+            current_row.append(bounding_box)
+        else:
+            rows.append(current_row)
+            current_row = [bounding_box]
+
+    rows.append(current_row)
+    return rows
+
+
+def sort_all_rows_by_x_coordinate(rows: Sequence[ndarray | Any]):
+    for row in rows:
+        row.sort(key=lambda x: x[0])
+    return rows
+
+
+def get_result_from_tesseract(image_path: str):
+    output = subprocess.getoutput('tesseract ' + image_path + ' - -l rus --oem 3 --psm 7 --dpi 72 -c tessedit_char_whitelist=tessedit_char_whitelist="АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ0123456789().calmg* "')
+    output = output.strip()
+
+    print(f'The type of variable output is {type(output)}')
+    return output
+
+
+def crop_each_bounding_box_and_ocr(rows: Sequence[ndarray | Any], based_image: np.ndarray):
+    table = []
+    current_row = []
+    image_number = 0
+
+    for row in rows:
+        for bounding_box in row:
+            x, y, w, h = bounding_box
+            y = y - 5
+
+            cropped_image = based_image[y:y+h, x:x+w]
+            image_slice_path: str = f'../../temp/ocr_slices/img_{image_number}.png'
+
+            cv2.imwrite(image_slice_path, cropped_image)
+
+            results_from_ocr = get_result_from_tesseract(image_path=image_slice_path)
+            current_row.append(results_from_ocr)
+            image_number += 1
+
+        table.append(current_row)
+        current_row = []
+
+    print(f'The type of variable table is {type(table)}')
+    return table
+
+
+def generate_csv_file(table):
+    with open("temp/test_dt.csv", "w") as f:
+        for row in table:
+            f.write(",".join(row) + "\n")
+
+
+def recover_image(inverted_image: np.ndarray) -> np.ndarray:
+    recovered_img = cv2.bitwise_not(src=inverted_image)
+    recovered_img = cv2.threshold(recovered_img, 127, 255, cv2.THRESH_BINARY)[1]
+
+    return recovered_img
+
+
 def test_2():
-    cur_img_path: str = '../../temp/test_4_final_result.png'
+    cur_img_path: str = '../../temp/test_4_final_result_x2.png'
     cur_img: np.ndarray = cv2.imread(filename=cur_img_path)
 
     gray_img = cv2.cvtColor(src=cur_img, code=cv2.COLOR_BGR2GRAY)
@@ -418,6 +550,36 @@ def test_2():
 
     denoised_image = remove_noise_with_erode_and_dilate(image_without_lines=image_without_lines)
     cv2.imwrite(filename='../../temp/test_11_denoised_dt.png', img=denoised_image)
+
+    # recovered_image = recover_image(inverted_image=denoised_image)
+    # cv2.imwrite(filename='../../temp/test_13_recovered_dt.png', img=recovered_image)
+
+    denoised_dilated_image = dilate_image(denoised_image=denoised_image)
+    cv2.imwrite(filename='../../temp/test_12_denoised_dilated_dt.png', img=denoised_dilated_image)
+
+    word_contours = find_word_contours(denoised_dilated_image=denoised_dilated_image)
+    cv2.drawContours(cur_img, word_contours, -1, (0, 255, 0), 3)
+
+    cv2.imwrite(filename='../../temp/test_13_contoured_dt.png', img=cur_img)
+
+    bounding_boxes = convert_contours_to_bounding_boxes(contours=word_contours, original_img=cur_img)
+    mean_height_bounding_boxes: np.floating = get_mean_height_of_bounding_boxes(bounding_boxes=bounding_boxes)
+
+    print(f'Средняя высота bounding boxes - {mean_height_bounding_boxes}')
+
+    sorted_bounding_boxes = sort_bounding_boxes_by_y_coordinate(bounding_boxes=bounding_boxes)
+
+    print(f'bounding_boxes успешно отсортированы по y координате')
+
+    dt_rows = club_all_bounding_boxes_by_similar_y_coordinates_into_rows(sorted_bounding_boxes=sorted_bounding_boxes,
+                                                                         mean_height=mean_height_bounding_boxes)
+    sorted_dt_rows = sort_all_rows_by_x_coordinate(rows=dt_rows)
+    print(f'Полученные строки отсортированы - sorted_dt_rows')
+
+    table = crop_each_bounding_box_and_ocr(rows=sorted_dt_rows, based_image=cur_img)
+    print(f'table извлечена через TesseractOCR')
+    generate_csv_file(table=table)
+    print('Извлеченные данные из table записаны в csv файл')
 
 
 test_2()

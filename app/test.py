@@ -395,7 +395,9 @@ def test(is_img_processing: bool = False):
 # test(is_img_processing=True)
 
 
-# based_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/76.jpg'
+path: str = 'temp/'
+img_filename: str = 'test_4_final_result.png'
+
 #
 # dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
 #                                     output_filename=based_img_path.replace('34.jpg',
@@ -404,14 +406,14 @@ def test(is_img_processing: bool = False):
 #                                     offset=0,
 #                                     is_erode=False)
 
-# cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
-# # upscale_image() возвращает путь до upscaled_x4 табличного изображения
-# dt_upscaled_img = upscale_image(path_to_based_img=dt_img,
-#                                 path_to_upscaled_img=dt_img.replace('26_dt_part.jpg',
-#                                                                     'upscaled_4_26_dt_part.jpg'),
-#                                 model=cur_model)
+cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=2)
+# upscale_image() возвращает путь до upscaled_x4 табличного изображения
+dt_upscaled_img = upscale_image(path_to_based_img=f'{path}{img_filename}',
+                                path_to_upscaled_img=f'{path}{img_filename.replace('test_4_final_result.png',
+                                                                                   'test_4_final_result_x2.png')}',
+                                model=cur_model)
 #
-# data = dt_img_extracter(img_path='temp/26_dt_part.jpg')
+data = dt_img_extracter(img_path='temp/test_11_denoised_dt.png')
 
 # print(data)
 # dt_collection: dict = {

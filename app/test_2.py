@@ -15,36 +15,38 @@ from PIL import Image as Img
 load_dotenv()
 
 
-# # enhanced_file: str = 'temp/scaled4_loveimg_test_2.png'
-# image_path: str = f'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/test.png'
+image_path: str = f'temp/test_4_final_result_x2.png'
 #
-# image_cv2 = cv2.imread(filename=image_path)
-# languages: list = ['ru']
+image_cv2 = cv2.imread(filename=image_path)
+languages: list = ['ru']
 #
-# # dt_img2excel(img_path=image_path)
+# dt_img2excel(img_path=image_path)
 #
 #
-# print("[INFO] OCR'ing input image...")
-# print(f"[INFO] OCR'ing with the following languages: {languages}")
+print("[INFO] OCR'ing input image...")
+print(f"[INFO] OCR'ing with the following languages: {languages}")
 #
-# test_case: int = 1
+test_case: int = 2
+results: list = []
 #
-# if test_case == 1:
-#     # reader = easyocr.Reader(lang_list=languages, gpu=True,
-#     #                         model_storage_directory='fine_tune', user_network_directory='fine_tune',
-#     #                         recog_network='ru_finetune')
-#     reader = easyocr.Reader(lang_list=languages, gpu=True)
-#     # results = reader.readtext(image_cv2, text_threshold=0.75, contrast_ths=0.7, width_ths=1.25, height_ths=0.75,
-#     #                           ycenter_ths=0.5, slope_ths=1, add_margin=0.175, decoder='wordbeamsearch', beamWidth=20,
-#     #                           canvas_size=3500)
-#     # Not bad
-#     results = reader.readtext(image_cv2, text_threshold=0.7, contrast_ths=0.8, width_ths=1.2, height_ths=0.8,
-#                               ycenter_ths=0.5, slope_ths=1, add_margin=0.200, decoder='wordbeamsearch', beamWidth=20,
-#                               canvas_size=3500)
-# if test_case == 2:
-#     reader = easyocr.Reader(lang_list=languages, gpu=True)
-#     # results = reader.readtext(image_cv2)
-#     results = reader.readtext(image_cv2)
+if test_case == 1:
+    # reader = easyocr.Reader(lang_list=languages, gpu=True,
+    #                         model_storage_directory='fine_tune', user_network_directory='fine_tune',
+    #                         recog_network='ru_finetune')
+    reader = easyocr.Reader(lang_list=languages, gpu=True)
+    # results = reader.readtext(image_cv2, text_threshold=0.75, contrast_ths=0.7, width_ths=1.25, height_ths=0.75,
+    #                           ycenter_ths=0.5, slope_ths=1, add_margin=0.175, decoder='wordbeamsearch', beamWidth=20,
+    #                           canvas_size=3500)
+    # Not bad
+    results = reader.readtext(image_cv2, text_threshold=0.7, contrast_ths=0.8, width_ths=1.2, height_ths=0.8,
+                              ycenter_ths=0.5, slope_ths=1, add_margin=0.200, decoder='wordbeamsearch', beamWidth=20,
+                              canvas_size=3500)
+if test_case == 2:
+    reader = easyocr.Reader(lang_list=languages, gpu=True)
+    # results = reader.readtext(image_cv2)
+    results = reader.readtext(image_cv2)
+
+# print(results)
 #
 # # Преобразуем изображение OpenCV в формат PIL
 # image_pil = Image.fromarray(cv2.cvtColor(image_cv2, cv2.COLOR_BGR2RGB))
@@ -53,12 +55,12 @@ load_dotenv()
 # # Выберите шрифт (если нужный шрифт не установлен, вы можете указать путь к .ttf файлу)
 # font = ImageFont.truetype(font="arial.ttf", size=20)  # Убедитесь, что путь к шрифту корректный
 #
-# for (bbox, text, prob) in results:
-#     print("[INFO] {:.4f}: {}".format(prob, text))
-#     # Распаковка координат
-#     (tl, tr, br, bl) = bbox
-#     tl = (int(tl[0]), int(tl[1]))
-#     br = (int(br[0]), int(br[1]))
+for (bbox, text, prob) in results:
+    print("[INFO] {:.4f}: {}".format(prob, text))
+    # Распаковка координат
+    (tl, tr, br, bl) = bbox
+    tl = (int(tl[0]), int(tl[1]))
+    br = (int(br[0]), int(br[1]))
 #
 #     # Рисуем прямоугольник
 #     draw.rectangle([tl, br], outline=(0, 255, 0), width=2)
@@ -281,7 +283,7 @@ def crop_rectangles_to_single_image(image_path, rectangles, min_area=3000, is_de
     return cropped_image
 
 
-# test_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
+# test_img_path: str = 'temp/test_11_denoised_dt.png'
 # test_img = cv2.imread(filename=test_img_path)
 # # Шаг 1 - делаем серым
 # gray_img = cv2.cvtColor(src=test_img, code=cv2.COLOR_BGR2GRAY)
