@@ -1,6 +1,7 @@
 from typing import Any, Sequence
 
 import cv2
+import easyocr
 import os
 import pytesseract
 import time
@@ -189,7 +190,8 @@ class ImageTableExtracter:
             cv2.rectangle(debug_image, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)  # Рисуем общий прямоугольник
             cv2.imwrite(filename='../../temp/test_combined.png', img=debug_image)
 
-        cv2.imwrite(filename='../../temp/test_4_final_result.png', img=cropped_image)
+        # cv2.imwrite(filename='../../temp/test_4_final_result.png', img=cropped_image)
+        cv2.imwrite(filename=dt_coloured_img, img=cropped_image)
         return cropped_image
 
 
@@ -234,7 +236,8 @@ def improve_img_quality(img_path: str, output_path: str, sharpness: int = 1, con
 
     # Конвертируем в PIL Image (Im) и сохраняем
     img_enhanced = Img.fromarray(img_enhanced)
-    img_enhanced.show()
+    # img_enhanced.show() - для отладки
+    # img_enhanced.show()
     img_enhanced.save(output_path)
 
 
@@ -309,43 +312,88 @@ def cropped_based_img(input_file: str, output_file: str):
     cv2.imwrite(filename=output_file, img=cropped_img)
 
 
-def cropped_img_files(folder_path: str):
-    for img_file in os.listdir(path=folder_path):
-        output_file_name: str = ''
-
-        if img_file.endswith('.png'):
-            output_file_name = f'{img_file.replace('.png', '')}_cropped.png'
-        if img_file.endswith('.jpg'):
-            output_file_name = f'{img_file.replace('.jpg', '')}_cropped.jpg'
-
-        cropped_based_img(input_file=f'{folder_path}{img_file}', output_file=f'{folder_path}{output_file_name}')
-
-
-def test(is_already_cropped: bool = True):
+def image_processing(coloured_image_file: str, uncoloured_image_file: str) -> np.ndarray:
     folder_path: str = '../extract_assets/image_files/YPDs/trash/'
 
-    if is_already_cropped:
-        cropped_img_files(folder_path=folder_path)
-
-    coloured_img_file: str = '24_cropped.png'
-    uncoloured_img_file: str = '24_uncoloured_cropped.png'
-
-    improve_img_quality(img_path=f'{folder_path}/{coloured_img_file}',
-                        output_path=f'{folder_path}/{uncoloured_img_file}',
-                        sharpness=14, contrast=3, blur=1)
-
-    img_instance = ImageTableExtracter(image_path=f'{folder_path}/{uncoloured_img_file}')
+    img_instance = ImageTableExtracter(image_path=f'{folder_path}/{uncoloured_image_file}')
 
     img_instance.image_processing()
     img_instance.find_contours()
 
     img_instance.filter_contours_and_leave_only_rectangles(index=0.01)
     # возвращаем не путь до обрезанного изображения, а np.array
-    dt_im = img_instance.crop_rectangles_to_single_image(dt_coloured_img=f'{folder_path}{coloured_img_file}')
-    print(dt_im, sep='\n')
+    dt_im = img_instance.crop_rectangles_to_single_image(dt_coloured_img=f'{folder_path}{coloured_image_file}')
+
+    return dt_im
 
 
-# test(is_already_cropped=True)
+def cropped_to_dt_img_files(folder_path: str):
+    # dt_data = None
+    for img_file in os.listdir(path=folder_path):
+        if img_file.endswith('.png'):
+            # Создаем имя для обрезанного изображения
+            output_file_name = f'{img_file.replace('.png', '')}_cropped.png'
+            # Обрезаем изображение
+            cropped_based_img(input_file=f'{folder_path}{img_file}', output_file=f'{folder_path}{output_file_name}')
+            # Создаем имя для серого изображения
+            uncoloured_img_file: str = output_file_name.replace('.png', '_uncoloured.png')
+            # На основе обрезанного изображения мы улучшаем его качество и делаем его серым
+            improve_img_quality(img_path=f'{folder_path}/{output_file_name}',
+                                output_path=f'{folder_path}/{uncoloured_img_file}',
+                                sharpness=14, contrast=3, blur=1)
+            # Извлекаем данные из табличной части
+            dt_data = image_processing(coloured_image_file=output_file_name,
+                                       uncoloured_image_file=uncoloured_img_file)
+
+        if img_file.endswith('.jpg'):
+            output_file_name = f'{img_file.replace('.jpg', '')}_cropped.jpg'
+            cropped_based_img(input_file=f'{folder_path}{img_file}', output_file=f'{folder_path}{output_file_name}')
+
+            uncoloured_img_file: str = output_file_name.replace('.jpg', '_uncoloured.jpg')
+
+            improve_img_quality(img_path=f'{folder_path}/{output_file_name}',
+                                output_path=f'{folder_path}/{uncoloured_img_file}',
+                                sharpness=14, contrast=3, blur=1)
+
+            dt_data = image_processing(coloured_image_file=output_file_name,
+                                       uncoloured_image_file=uncoloured_img_file)
+
+    # return dt_data
+
+
+def removed_uncoloured_images(folder_path: str):
+    for img_file in os.listdir(path=folder_path):
+        if 'uncoloured' in img_file:
+            os.remove(f'{folder_path}{img_file}')
+
+
+def img_app_run():              # is_already_cropped: bool = True
+    folder_path: str = '../extract_assets/image_files/YPDs/trash/'
+
+    cropped_to_dt_img_files(folder_path=folder_path)
+    removed_uncoloured_images(folder_path=folder_path)
+
+    # coloured_img_file: str = '24_cropped.png'
+    # uncoloured_img_file: str = '24_uncoloured_cropped.png'
+    #
+    # improve_img_quality(img_path=f'{folder_path}/{coloured_img_file}',
+    #                     output_path=f'{folder_path}/{uncoloured_img_file}',
+    #                     sharpness=14, contrast=3, blur=1)
+    # image_processing(coloured_image_file=coloured_img_file, uncoloured_image_file=uncoloured_img_file)
+    # img_instance = ImageTableExtracter(image_path=f'{folder_path}/{uncoloured_img_file}')
+    #
+    # img_instance.image_processing()
+    # img_instance.find_contours()
+    #
+    # img_instance.filter_contours_and_leave_only_rectangles(index=0.01)
+    # # возвращаем не путь до обрезанного изображения, а np.array
+    # dt_im = img_instance.crop_rectangles_to_single_image(dt_coloured_img=f'{folder_path}{coloured_img_file}')
+    #
+    # # print(dt_im, sep='\n')
+
+
+img_app_run()
+
 
 def erode_vertical_lines(inverted_image: np.ndarray) -> np.ndarray:
     hor = np.array([[1, 1, 1, 1, 1, 1]])
@@ -422,7 +470,7 @@ def convert_contours_to_bounding_boxes(contours: Sequence[ndarray | Any],
 
         # Строки ниже нужны для отладки
         image_with_all_bounding_boxes = cv2.rectangle(image_with_all_bounding_boxes,
-                                                      (x, y), (x + w, y + h), (0, 255, 0), 2)
+                                                      (x, y), (x + w, y + h), (0, 255, 0), 1)
         cv2.imwrite(filename='../../temp/test_14_bounding_boxes.png', img=image_with_all_bounding_boxes)
 
     return bounding_boxes
@@ -472,15 +520,35 @@ def sort_all_rows_by_x_coordinate(rows: Sequence[ndarray | Any]):
     return rows
 
 
-def get_result_from_tesseract(image_path: str):
+def get_result_from_tesseract(image_path: str) -> str:
     output = subprocess.getoutput('tesseract ' + image_path + ' - -l rus --oem 3 --psm 7 --dpi 72 -c tessedit_char_whitelist=tessedit_char_whitelist="АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ0123456789().calmg* "')
     output = output.strip()
 
-    print(f'The type of variable output is {type(output)}')
+    # print(f'The type of variable output is {type(output)}')
     return output
 
 
-def crop_each_bounding_box_and_ocr(rows: Sequence[ndarray | Any], based_image: np.ndarray):
+def get_result_from_easyocr(image_path: str) -> list | str | None:
+    extracted_data: list[str] = []
+    img_cv2 = cv2.imread(filename=image_path)
+
+    reader = easyocr.Reader(lang_list=['ru'], gpu=True)
+    output = reader.readtext(image=img_cv2)
+
+    for (_, text, _) in output:
+        # print(f"[INFO]: {text}")
+        extracted_data.append(text)
+
+    if len(extracted_data) == 1:
+        return extracted_data[0]
+
+    if len(extracted_data) == 0:    # Бывает и пустой список
+        return None
+
+    return extracted_data
+
+
+def crop_each_bounding_box_and_ocr(rows: Sequence[ndarray | Any], based_image: np.ndarray) -> list:
     table = []
     current_row = []
     image_number = 0
@@ -492,24 +560,33 @@ def crop_each_bounding_box_and_ocr(rows: Sequence[ndarray | Any], based_image: n
 
             cropped_image = based_image[y:y+h, x:x+w]
             image_slice_path: str = f'../../temp/ocr_slices/img_{image_number}.png'
+            try:
+                cv2.imwrite(image_slice_path, cropped_image)
+                results_from_ocr = get_result_from_easyocr(image_path=image_slice_path)
 
-            cv2.imwrite(image_slice_path, cropped_image)
+                if results_from_ocr is None:
+                    continue
+                else:
+                    current_row.append(results_from_ocr)
 
-            results_from_ocr = get_result_from_tesseract(image_path=image_slice_path)
-            current_row.append(results_from_ocr)
-            image_number += 1
+                image_number += 1
+            except cv2.error as e:
+                print(f"Ошибка во время записи {e}")
 
         table.append(current_row)
         current_row = []
 
-    print(f'The type of variable table is {type(table)}')
     return table
 
 
-def generate_csv_file(table):
-    with open("temp/test_dt.csv", "w") as f:
+def generate_csv_file(table: list | str, csv_filename: str):
+    with open(f"../../temp/{csv_filename}", "w", encoding='utf-8') as f:
         for row in table:
-            f.write(",".join(row) + "\n")
+            if isinstance(row, list):
+                # Если строка у нас список
+                f.write(",".join(str(item) for item in row) + "\n")
+            else:
+                f.write(row + "\n")
 
 
 def recover_image(inverted_image: np.ndarray) -> np.ndarray:
@@ -577,9 +654,25 @@ def test_2():
     print(f'Полученные строки отсортированы - sorted_dt_rows')
 
     table = crop_each_bounding_box_and_ocr(rows=sorted_dt_rows, based_image=cur_img)
-    print(f'table извлечена через TesseractOCR')
+    print(f'table извлечена через EasyOCR')
     generate_csv_file(table=table)
     print('Извлеченные данные из table записаны в csv файл')
 
 
-test_2()
+# test_2()
+
+
+def test_3(image_filename: str, csv_filename: str):
+    cur_img_path: str = f'../../temp/{image_filename}'
+    cur_img: np.ndarray = cv2.imread(filename=cur_img_path)
+
+    reader = easyocr.Reader(lang_list=['ru'], gpu=True)
+    output = reader.readtext(image=cur_img)
+
+    data: list = []
+    for (_, text, _) in output:
+        data.append(text)
+    generate_csv_file(table=data, csv_filename=csv_filename)
+
+
+# test_3()
