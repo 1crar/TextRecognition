@@ -397,6 +397,7 @@ def test(is_img_processing: bool = False):
 
 path: str = 'temp/'
 img_filename: str = 'test_4_final_result.png'
+upscaled_img_filename: str = 'test_4_final_result_x4.png'
 
 #
 # dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
@@ -406,14 +407,14 @@ img_filename: str = 'test_4_final_result.png'
 #                                     offset=0,
 #                                     is_erode=False)
 
-cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=2)
-# upscale_image() возвращает путь до upscaled_x4 табличного изображения
-dt_upscaled_img = upscale_image(path_to_based_img=f'{path}{img_filename}',
-                                path_to_upscaled_img=f'{path}{img_filename.replace('test_4_final_result.png',
-                                                                                   'test_4_final_result_x2.png')}',
-                                model=cur_model)
+cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
+dt_upscale_img = upscale_image(path_to_based_img=f'{path}{img_filename}',
+                               path_to_upscaled_img=f'{path}{upscaled_img_filename}',
+                               model=cur_model)
+
+
 #
-data = dt_img_extracter(img_path='temp/test_11_denoised_dt.png')
+# data = dt_img_extracter(img_path='temp/test_11_denoised_dt.png')
 
 # print(data)
 # dt_collection: dict = {
