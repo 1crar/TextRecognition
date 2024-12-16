@@ -1,5 +1,6 @@
 from typing import Any, Sequence
 
+import copy
 import cv2
 import easyocr
 import os
@@ -9,19 +10,20 @@ import torch
 import subprocess
 
 import numpy as np
-import pandas as pd
-from cv2 import Mat
 
 from dotenv import load_dotenv
+from img2table.ocr import EasyOCR
+from img2table.document import Image as ImageDoc
 from PIL import Image as Img
 from PIL import ImageEnhance
-from numpy import ndarray, dtype
+from numpy import ndarray
+from super_image import DrlnModel
 
 load_dotenv()
 TESSERACT_OCR: str = os.getenv('TESSERACT')
 
 
-class Image:
+class ImageTest:
     "Old version of image extraction"
 
     def __init__(self, _path_dir: str, exe_file: str):
@@ -392,9 +394,6 @@ def img_app_run():              # is_already_cropped: bool = True
     # # print(dt_im, sep='\n')
 
 
-img_app_run()
-
-
 def erode_vertical_lines(inverted_image: np.ndarray) -> np.ndarray:
     hor = np.array([[1, 1, 1, 1, 1, 1]])
 
@@ -580,7 +579,7 @@ def crop_each_bounding_box_and_ocr(rows: Sequence[ndarray | Any], based_image: n
 
 
 def generate_csv_file(table: list | str, csv_filename: str):
-    with open(f"../../temp/{csv_filename}", "w", encoding='utf-8') as f:
+    with open(csv_filename, "w", encoding='utf-8') as f:
         for row in table:
             if isinstance(row, list):
                 # Если строка у нас список
@@ -594,6 +593,60 @@ def recover_image(inverted_image: np.ndarray) -> np.ndarray:
     recovered_img = cv2.threshold(recovered_img, 127, 255, cv2.THRESH_BINARY)[1]
 
     return recovered_img
+
+
+def detect_datatable_part(ypd_img_path: str, output_filename: str, offset: int = 0,
+                          is_erode: bool = True, is_debugging: bool = True) -> str:
+    ocr_detector = EasyOCR(lang=['ru'])
+
+    # Создаем экземпляр класса документ
+    doc_dt = ImageDoc(src=ypd_img_path)
+    extracted_tables = doc_dt.extract_tables(ocr=ocr_detector)
+
+    table_img = cv2.imread(filename=ypd_img_path)
+    output_path: str = output_filename
+
+    for idx, table in enumerate(extracted_tables):
+        # Инициализируем минимальные и максимальные границы
+        min_x1 = min(cell.bbox.x1 for row in table.content.values() for cell in row)
+        min_y1 = min(cell.bbox.y1 for row in table.content.values() for cell in row)
+        max_x2 = max(cell.bbox.x2 for row in table.content.values() for cell in row)
+        max_y2 = max(cell.bbox.y2 for row in table.content.values() for cell in row)
+
+        # Вычисляем высоту таблицы и соотношение для нижнего отступа (так как иногда не захватывается ласт строка)
+        table_height = max_y2 - min_y1
+        # Динамически будет создаваться отступ в пропорции 3% от всей высоты таблицы
+        dynamic_lower_offset = int(table_height * 0.03)
+
+        # Создаем общий отступ
+        total_y_min = max(0, min_y1 - offset)
+        total_y_max = max_y2 + offset + dynamic_lower_offset
+
+        # Обрезаем всю табличную часть с учетом границ и отступа
+        crop_dt_img = table_img[
+                      total_y_min:total_y_max,
+                      max(0, min_x1 - offset):max_x2 + offset
+                  ]
+        if is_debugging:
+            # Следующие строки нужны для отладки процесса распознавания табличной части
+            detected_lines = copy.deepcopy(table_img)
+            # Прорисовка границ табличной части
+            for row in table.content.values():
+                for cell in row:
+                    x1, y1, x2, y2 = cell.bbox.x1, cell.bbox.y1, cell.bbox.x2, cell.bbox.y2
+                    cv2.rectangle(detected_lines, (x1, y1), (x2, y2), (0, 0, 255), 2)
+            # Сохраняем изображение табличной части
+            # cv2.imwrite(filename=temp_filename, img=detected_lines)
+
+        try:
+            if is_erode:
+                crop_dt_img = cv2.erode(crop_dt_img, kernel=np.ones((2, 2)), iterations=1)
+            cv2.imwrite(output_path, crop_dt_img)
+        except Exception as e:
+            # print(f"ERROR: {e}")
+            raise Exception(f"ERROR: ошибка записи файла - {e}")
+
+    return output_path
 
 
 def test_2():
@@ -655,24 +708,62 @@ def test_2():
 
     table = crop_each_bounding_box_and_ocr(rows=sorted_dt_rows, based_image=cur_img)
     print(f'table извлечена через EasyOCR')
-    generate_csv_file(table=table)
+    generate_csv_file(table=table, csv_filename='../../temp/csv_files/test_3.csv')
     print('Извлеченные данные из table записаны в csv файл')
 
 
 # test_2()
 
 
-def test_3(image_filename: str, csv_filename: str):
-    cur_img_path: str = f'../../temp/{image_filename}'
-    cur_img: np.ndarray = cv2.imread(filename=cur_img_path)
+def test_3():
+    cur_path: str = f'../extract_assets/image_files/YPDs/trash/'
+    cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
 
-    reader = easyocr.Reader(lang_list=['ru'], gpu=True)
-    output = reader.readtext(image=cur_img)
+    for dt_cropped_img in os.listdir(path=cur_path):
+        if 'cropped' in dt_cropped_img:
+            print(dt_cropped_img[:-4])
+            # Скейлим изображение
+            dt_upscale_img = upscale_image(path_to_based_img=f'{cur_path}{dt_cropped_img}',
+                                           path_to_upscaled_img=f'{cur_path}{dt_cropped_img}',
+                                           model=cur_model)
+            #
+            cur_img: np.ndarray = cv2.imread(filename=dt_upscale_img)
 
-    data: list = []
-    for (_, text, _) in output:
-        data.append(text)
-    generate_csv_file(table=data, csv_filename=csv_filename)
+            reader = easyocr.Reader(lang_list=['ru'], gpu=True)
+            output = reader.readtext(image=cur_img)
+
+            data: list = []
+            for (_, text, _) in output:
+                data.append(text)
+            generate_csv_file(table=data, csv_filename=f'../../temp/csv_files/{dt_cropped_img[:-4]}.csv')
 
 
 # test_3()
+
+
+def test_4():
+    start = time.time()
+
+    cur_path: str = f'../extract_assets/image_files/YPDs/'
+
+    ignored_folders: set = {'sample', 'trash', 'dt_part_not_trash_YPDs'}
+    counter_files: int = 0
+
+    for img_file in os.listdir(path=cur_path):
+        try:
+            if img_file not in ignored_folders:
+                dt_img = detect_datatable_part(ypd_img_path=f'{cur_path}{img_file}',
+                                               output_filename=f'{cur_path}dt_part_not_trash_YPDs/{img_file[:-4]}_cropped.'
+                                                               f'{img_file[-3:]}',
+                                               is_debugging=False)
+                print(f'INFO: Табличная часть упд успешно записана {dt_img}')
+                counter_files += 1
+        except Exception as e:
+            raise ValueError(f"Не удалось записать изображение {e}")
+
+    print(f'INFO: Кол-во обработанных изображений в директории {cur_path} --- {counter_files}')
+    end = time.time() - start
+    print(f'Время выполнения команды: {end:10.2f}')
+
+
+test_4()

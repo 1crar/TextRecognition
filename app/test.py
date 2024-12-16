@@ -395,9 +395,9 @@ def test(is_img_processing: bool = False):
 # test(is_img_processing=True)
 
 
-path: str = 'temp/'
-img_filename: str = 'test_4_final_result.png'
-upscaled_img_filename: str = 'test_4_final_result_x4.png'
+# path: str = 'temp/'
+# img_filename: str = 'test_4_final_result.png'
+# upscaled_img_filename: str = 'test_4_final_result_x4.png'
 
 #
 # dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
@@ -407,10 +407,10 @@ upscaled_img_filename: str = 'test_4_final_result_x4.png'
 #                                     offset=0,
 #                                     is_erode=False)
 
-cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
-dt_upscale_img = upscale_image(path_to_based_img=f'{path}{img_filename}',
-                               path_to_upscaled_img=f'{path}{upscaled_img_filename}',
-                               model=cur_model)
+# cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
+# dt_upscale_img = upscale_image(path_to_based_img=f'{path}{img_filename}',
+#                                path_to_upscaled_img=f'{path}{upscaled_img_filename}',
+#                                model=cur_model)
 
 
 #
