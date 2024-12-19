@@ -16,7 +16,7 @@ from PIL import Image as Img
 load_dotenv()
 
 
-image_path: str = f'pdf_appRecognizer/extract_assets/image_files/YPDs/test_2/dt_cropped/10_restored_PD_1_without_lines_dt.png'
+image_path: str = f'pdf_appRecognizer/extract_assets/image_files/YPDs/test_2/dt_cropped/YPD_6_cropped.jpg'
 #
 image_cv2 = cv2.imread(filename=image_path)
 languages: list = ['ru']
@@ -41,9 +41,9 @@ if test_case == 1:
     #                           ycenter_ths=0.5, slope_ths=1, add_margin=0.175, decoder='wordbeamsearch', beamWidth=20,
     #                           canvas_size=3500)
     # Not bad
-    results = reader.readtext(image_cv2, text_threshold=0.0, contrast_ths=0.8, width_ths=0.9, height_ths=0.7,
-                              ycenter_ths=0.5, slope_ths=1, add_margin=0.2, decoder='wordbeamsearch', beamWidth=20,
-                              canvas_size=3500, y_ths=0.8)
+    results = reader.readtext(image_cv2, text_threshold=0.0, contrast_ths=0.8, width_ths=1.2, height_ths=1.9,
+                              ycenter_ths=0.5, slope_ths=1, add_margin=0.1, decoder='wordbeamsearch', beamWidth=20,
+                              canvas_size=3500, y_ths=0.8, blocklist='[]|/_')
 if test_case == 2:
     reader = easyocr.Reader(lang_list=languages, gpu=True)
     # results = reader.readtext(image_cv2)
@@ -57,63 +57,102 @@ draw = ImageDraw.Draw(image_pil)
 #
 # # Выберите шрифт (если нужный шрифт не установлен, вы можете указать путь к .ttf файлу)
 font = ImageFont.truetype(font="arial.ttf", size=20)  # Убедитесь, что путь к шрифту корректный
-#
+
 data_table: list = []
 detected_bboxes = []
 
 
 def is_intersecting(bbox1, bbox2):
-    # Получаем координаты
     (tl1, tr1, br1, bl1) = bbox1
     (tl2, tr2, br2, bl2) = bbox2
 
-    # Проверяем пересечение
     if tl1[0] < br2[0] and br1[0] > tl2[0] and tl1[1] < br2[1] and br1[1] > tl2[1]:
         return True
     return False
 
 
+def find_intersecting_bboxes(index, results, found_indices):
+    bbox1, text1, prob1 = results[index]
+    for i in range(len(results)):
+        if i not in found_indices and is_intersecting(bbox1, results[i][0]):
+            found_indices.add(i)
+            find_intersecting_bboxes(i, results, found_indices)
+
+
 filtered_results = []
 used_indices = set()
-
+is_complex: bool = False
 # merged_bboxes = merge_bboxes(bboxes=detected_bboxes, delta_x=0.1, delta_y=3.0)
 
 for i in range(len(results)):
-    if i in used_indices:
-        continue
-
-    bbox1, text1, prob1 = results[i]
-    filtered_results.append(results[i])
-
-    for j in range(i + 1, len(results)):
-        if j in used_indices:
-            continue
-
-        bbox2, text2, prob2 = results[j]
-
-        if is_intersecting(bbox1, bbox2):
-            filtered_results.append(results[j])
-            used_indices.add(j)
+    if i not in used_indices:
+        current_indices = set([i])
+        find_intersecting_bboxes(i, results, current_indices)
+        used_indices.update(current_indices)
+        # Добавляем все найденные bbox в filtered_results
+        for idx in current_indices:
+            filtered_results.append(results[idx])
 
 
-for (bbox, text, prob) in filtered_results:
-    print("[INFO] {:.4f}: {}".format(prob, text))
-    # Распаковка координат
-    (tl, tr, br, bl) = bbox
-    tl = (int(tl[0]), int(tl[1]))
-    br = (int(br[0]), int(br[1]))
+if is_complex:
+    for i in range(len(results)):
+        if i not in used_indices:
+            current_indices = set([i])
+            find_intersecting_bboxes(i, results, current_indices)
+            used_indices.update(current_indices)
+            # Добавляем все найденные bbox в filtered_results
+            for idx in current_indices:
+                filtered_results.append(results[idx])
 
-    # Рисуем прямоугольник
-    draw.rectangle([tl, br], outline=(0, 255, 0), width=2)
+    for (bbox, text, prob) in filtered_results:
+        print("[INFO] {:.4f}: {}".format(prob, text))
+        # Распаковка координат
+        (tl, tr, br, bl) = bbox
+        tl = (int(tl[0]), int(tl[1]))
+        br = (int(br[0]), int(br[1]))
 
-    # Рисуем текст
-    draw.text((tl[0], tl[1] - 10), text, fill=(0, 255, 0), font=font)
-    data_table.append(text)
+        # Рисуем прямоугольник
+        draw.rectangle([tl, br], outline=(0, 255, 0), width=2)
+
+        # Рисуем текст
+        draw.text((tl[0], tl[1] - 10), text, fill=(0, 255, 0), font=font)
+        data_table.append(text)
+else:
+    for (bbox, text, prob) in results:
+        print("[INFO] {:.4f}: {}".format(prob, text))
+        # Распаковка координат
+        (tl, tr, br, bl) = bbox
+        tl = (int(tl[0]), int(tl[1]))
+        br = (int(br[0]), int(br[1]))
+
+        # Рисуем прямоугольник
+        draw.rectangle([tl, br], outline=(0, 255, 0), width=2)
+
+        # Рисуем текст
+        draw.text((tl[0], tl[1] - 10), text, fill=(0, 255, 0), font=font)
+        data_table.append(text)
+
 
 from pdf_appRecognizer.classes.img import generate_csv_file
 
-generate_csv_file(table=data_table,
-                  csv_filename='pdf_appRecognizer/extract_assets/image_files/YPDs/test_2/csv_files/YPD_1_ver3.csv')
+
+def remove_column_names(extracted_data: list) -> list:
+    cleaned_data: list = []
+    is_flag = False
+
+    for cur_text in extracted_data:
+        if cur_text == 'А':
+            is_flag = True
+
+        if is_flag:
+            cleaned_data.append(cur_text)
+
+    return cleaned_data
+
+
+cleaned_data_table: list = remove_column_names(extracted_data=data_table)
+generate_csv_file(table=cleaned_data_table,
+                  csv_filename='pdf_appRecognizer/extract_assets/image_files/YPDs/test_2/csv_files/YPD_6.csv')
 
 # Отображаем результат
 image_pil.show()
