@@ -674,6 +674,28 @@ def test_img2excel(ypd_path: str, output_filename: str):
     df.to_excel(output_filename, index=False, header=False)
 
 
+def delete_dt_lines(img_file: str, img_path: str, output_path: str, is_debugging: bool = True) -> np.ndarray:
+    cur_img: np.ndarray = cv2.imread(filename=f'{img_path}/{img_file}')
+
+    gray_img = cv2.cvtColor(src=cur_img, code=cv2.COLOR_BGR2GRAY)
+    threshold_img = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY)[1]
+    inverted_img = cv2.bitwise_not(src=threshold_img)
+
+    v_lines_erode_image = erode_vertical_lines(inverted_image=inverted_img)
+    h_lines_erode_image = erode_horizontal_lines(inverted_image=inverted_img)
+
+    combined_lines_image = combine_eroded_images(vertical_lines_eroded_image=v_lines_erode_image,
+                                                 horizontal_lines_eroded_image=h_lines_erode_image)
+    dilated_combined_image = dilate_lines_thicker(combined_image=combined_lines_image)
+
+    image_without_lines = cv2.subtract(inverted_img, dilated_combined_image)
+
+    if is_debugging:
+        cv2.imwrite(filename=output_path, img=image_without_lines)
+
+    return image_without_lines
+
+
 def test_processing():
     cur_img_path: str = '../extract_assets/image_files/YPDs/test_2/dt_cropped/10_restored_PD_1_without_lines_dt.png'
     save_path: str = '../extract_assets/image_files/YPDs/test_2/processing'
@@ -704,7 +726,7 @@ def test_processing():
     cv2.imwrite(filename=f'{save_path}/6_YPD_1_without_lines_dt.png', img=image_without_lines)
 
     # Перед denoised мы можем попробовать заапскейлить изображение!!!
-
+    return
     denoised_image = remove_noise_with_erode_and_dilate(image_without_lines=image_without_lines)
     cv2.imwrite(filename=f'{save_path}/7_YPD_1_denoised_dt.png', img=denoised_image)
 
@@ -802,13 +824,18 @@ def test(cur_path: str, is_export_to_dt2xlsx: bool):
 # test(cur_path=path_folder_test_2,  is_export_to_dt2xlsx=False)
 
 
-def mini_test():
-    unboarded_table_img = '../extract_assets/image_files/YPDs/test_2/processing/6_YPD_1_without_lines_dt.png'
-    cv2_unboarded_table_img = cv2.imread(filename=unboarded_table_img)
+def test_delete_lines_dt():
+    image_without_lines = delete_dt_lines(img_file='YPD_6_cropped.jpg',
+                                          img_path='../extract_assets/image_files/YPDs/test_2/dt_cropped',
+                                          output_path='../extract_assets/image_files/YPDs/test_2/dt_cropped/'
+                                                      'YPD_6_cropped_without_lined.jpg',
+                                          is_debugging=False)
 
-    restored_image = recover_image(inverted_image=cv2_unboarded_table_img)
-    cv2.imwrite(filename='../extract_assets/image_files/YPDs/test_2/processing/10_restored_PD_1_without_lines_dt.png',
-                img=restored_image)
+    restored_image_without_lines = recover_image(inverted_image=image_without_lines)
+
+    cv2.imwrite(filename='../extract_assets/image_files/YPDs/test_2/dt_cropped/YPD_6_without_lines_dt.jpg',
+                img=restored_image_without_lines)
 
 
-# mini_test()
+# test_delete_lines_dt()
+
