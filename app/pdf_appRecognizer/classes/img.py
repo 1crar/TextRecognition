@@ -793,7 +793,7 @@ path_folder_test_1: str = '../extract_assets/image_files/YPDs/test_1'
 path_folder_test_2: str = '../extract_assets/image_files/YPDs/test_2'
 
 
-def test(cur_path: str, is_export_to_dt2xlsx: bool):
+def test_image_cropper(cur_path: str, is_export_to_dt2xlsx: bool):
     start = time.time()
 
     ignored_folders: set = {'dt_cropped', 'xlsx_files', 'csv_files', 'processing'}
@@ -821,7 +821,7 @@ def test(cur_path: str, is_export_to_dt2xlsx: bool):
     print(f'Время выполнения программы: {end:10.2f}')
 
 
-# test(cur_path=path_folder_test_2,  is_export_to_dt2xlsx=False)
+# test_image_cropper(cur_path=path_folder_test_2,  is_export_to_dt2xlsx=False)
 
 
 def test_delete_lines_dt():
