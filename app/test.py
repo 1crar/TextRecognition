@@ -395,7 +395,10 @@ def test(is_img_processing: bool = False):
 # test(is_img_processing=True)
 
 
-# based_img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/76.jpg'
+# path: str = 'temp/'
+# img_filename: str = 'test_4_final_result.png'
+# upscaled_img_filename: str = 'test_4_final_result_x4.png'
+
 #
 # dt_img: str = detect_datatable_part(ypd_img_path=based_img_path,
 #                                     output_filename=based_img_path.replace('34.jpg',
@@ -405,13 +408,13 @@ def test(is_img_processing: bool = False):
 #                                     is_erode=False)
 
 # cur_model = DrlnModel.from_pretrained('eugenesiow/drln', scale=4)
-# # upscale_image() возвращает путь до upscaled_x4 табличного изображения
-# dt_upscaled_img = upscale_image(path_to_based_img=dt_img,
-#                                 path_to_upscaled_img=dt_img.replace('26_dt_part.jpg',
-#                                                                     'upscaled_4_26_dt_part.jpg'),
-#                                 model=cur_model)
+# dt_upscale_img = upscale_image(path_to_based_img=f'{path}{img_filename}',
+#                                path_to_upscaled_img=f'{path}{upscaled_img_filename}',
+#                                model=cur_model)
+
+
 #
-# data = dt_img_extracter(img_path='temp/26_dt_part.jpg')
+# data = dt_img_extracter(img_path='temp/test_11_denoised_dt.png')
 
 # print(data)
 # dt_collection: dict = {
@@ -423,5 +426,6 @@ def test(is_img_processing: bool = False):
 
 # detect_dt_part(input_img=temp, output_img=temp.replace('test_3.png', 'test_5.png'))
 
-img_path = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
-improve_img_quality(img_path=img_path, output_path=img_path, sharpness=14, contrast=3, blur=1)
+# img_path = 'pdf_appRecognizer/extract_assets/image_files/YPDs/trash/24_cropped.png'
+# improve_img_quality(img_path=img_path, output_path=img_path.replace('24_cropped.png', '24_uncoloured_cropped.png'),
+#                     sharpness=14, contrast=3, blur=1)
