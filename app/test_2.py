@@ -16,7 +16,7 @@ def remove_column_names(extracted_data: list) -> list:
     is_flag = False
 
     for cur_text in extracted_data:
-        if cur_text == 'A':
+        if cur_text == 'A' or cur_text == 'А':
             is_flag = True
 
         if is_flag:
@@ -73,6 +73,7 @@ def main_test_2(folder_path: str, img_filename: str, test_case: int, is_complex_
     for i in range(len(results)):
         if i not in used_indices:
             current_indices = set([i])
+
             find_intersecting_bboxes(i, results, current_indices)
             used_indices.update(current_indices)
             # Добавляем все найденные bbox в filtered_results
@@ -83,6 +84,7 @@ def main_test_2(folder_path: str, img_filename: str, test_case: int, is_complex_
         for i in range(len(results)):
             if i not in used_indices:
                 current_indices = set([i])
+
                 find_intersecting_bboxes(i, results, current_indices)
                 used_indices.update(current_indices)
                 # Добавляем все найденные bbox в filtered_results
@@ -127,7 +129,7 @@ def main_test_2(folder_path: str, img_filename: str, test_case: int, is_complex_
 
 
 cur_folder_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/test_2/dt_cropped'
-cur_img_file: str = 'YPD_1_without_lines_dt.png'
+cur_img_file: str = 'YPD_2_cropped.png'
 # Запуск функции извлечения данных из обрезанной таблицы из УПД (с границами/без границ ячеек)
 main_test_2(folder_path=cur_folder_path, img_filename=cur_img_file, test_case=1, is_complex_row=True)
 
