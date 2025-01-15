@@ -818,7 +818,7 @@ def test_cell_cropper():
                               cropped_file_name=filename)
 
 
-test_cell_cropper()
+# test_cell_cropper()
 
 
 def test_trash_processing_and_cropping():
