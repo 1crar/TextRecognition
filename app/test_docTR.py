@@ -5,8 +5,8 @@ from doctr.io import DocumentFile
 from doctr.datasets import VOCABS
 
 
-img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPD_1/UPD_1.png'
-local_model_path: str = 'trained_models/docTR/crnn_vgg16_bn_20241226-154828.pt'
+img_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPD_2/YPD_2.png'
+local_model_path: str = 'trained_models/docTR/crnn_vgg16_bn_20250113-173302.pt'
 # Подключаем gpu если torch.cuda.is_available() - True
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

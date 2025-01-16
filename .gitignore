@@ -41,3 +41,6 @@ app/temp
 
 10000-russian-words.txt
 russian.txt
+/app/trained_models/docTR
+
+

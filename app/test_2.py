@@ -133,7 +133,7 @@ def main_test_2(folder_path: str, img_filename: str, test_case: int, is_complex_
 
 def main_test_3_cell_extracter():
     cropped_path: str = ('pdf_appRecognizer/extract_assets/image_files/YPDs/test_1/dt_cropped/cropped_cells/'
-                         'cells_61_cropped')
+                         'cells_99_cropped')
     detected_files_path = os.path.join(cropped_path, 'detected_files')
     # Создание папки 'detected_files', если она не существует
     os.makedirs(detected_files_path, exist_ok=True)
