@@ -28,22 +28,10 @@ def dirty_image(img, mode):
 
 
 # Функция считывания ру слов из текстового файла 10000-russian-words.txt
-def ru_words_lst() -> list[str]:
-    with open(file='10000-russian-words.txt', mode='r', encoding='utf-8') as file:
+def ru_words_lst(src: str) -> list[str]:
+    with open(file=src, mode='r', encoding='utf-8', errors='ignore') as file:
         word_list = [el.replace('\n', '') for el in file.readlines()]
         return word_list
-
-
-# Функция, которая рандомно добавляет спец-символы в ру-слова (нужно для дообучения)
-def add_special_char(word) -> str:
-    specials = '/№()\"\"«»'
-
-    if random.choice([True, False]):
-        special_char = random.choice(specials)
-        position = random.randint(0, len(word))
-        return word[:position] + special_char + word[position:]
-
-    return word
 
 
 # Рандомный генератор слов со спецсимволами
@@ -61,64 +49,132 @@ def generate_name_company(word_list: list) -> str:
         return f'ООО \'{selected_words[0].capitalize()} {selected_words[1].capitalize()}\''
 
 
-def generate_inn_kpp_and_numbers() -> str:
+def generate_preposition(word_list: list) -> str:
+    selected_word: list = random.sample(word_list, 1)
+    return selected_word[0]
+
+
+
+def generate_inn_kpp_and_words(word_list: list) -> str:
     numbers_before_slash = ''.join(str(random.randint(0, 9)) for _ in range(10))
     numbers_after_slash = ''.join(str(random.randint(0, 9)) for _ in range(9))
 
-    # Формируем итоговую строку
+    # Формируем итоговую строку c числами
     result = f"{numbers_before_slash}/{numbers_after_slash}"
-    case = random.randint(1, 4)
+    case = random.randint(1, 2)
 
-    if case == 1 or case == 2:
+    if case == 1:
         return result
-    if case == 3:
-        return 'ИНН/КПП продавца:'
+    if case == 2:
+        selected_words: list = random.sample(word_list, 2)
+        return f'{selected_words[0]}/{selected_words[1]}'
+
+
+def generate_words_symbols_with_special_chars(word_list: list) -> str:
+    case: int = random.randint(1, 2)
+
+    if case == 1:
+        select_words: list = random.sample(word_list, 1)
+        internal_case: int = random.randint(1, 2)
+
+        if internal_case == 1:
+            return f'{select_words[0]}:'
+
+        if internal_case == 2:
+            return f'{select_words[0]};'
+
+    if case == 2:
+        select_words: list = random.sample(word_list, 2)
+        return f'{select_words[0]}, {select_words[1]}'
+
+
+def numbers_with_special_chars_v1(word_list: list) -> str:
+    case = random.randint(1, 6)
+
+    if case == 1 or case == 2 or case == 3:
+        # return f'{random_number_p1} {random_number_p2},{random_number_p3}'
+        select_words: list = random.sample(word_list, 1)
+        return f'({select_words[0]})'
+
     if case == 4:
-        return 'ИНН/КПП покупателя:'
-
-
-def generate_words_with_special_chars() -> str:
-    random_day = random.randint(10, 30)
-    random_month = random.randint(10, 12)
-
-    special_sentence: str = (f'№ п.п {random.randint(0, 9)}-{random.randint(0, 9)} № '
-                             f'{random.randint(1, 9999)} от {random_day}.{random_month}.2025')
-    case = random.randint(1, 4)
-
-    if case == 1 or case == 2:
-        return special_sentence
-    if case == 3:
-        return 'Счет-фактура №'
-    if case == 4:
-        return 'Исправления №'
-
-
-def numbers_with_special_chars() -> str:
-    random_number_p1: str = str(random.randint(1, 9))
-    random_number_p2: str = str(random.randint(1, 999))
-    random_number_p3: str = str(random.randint(10, 999))
-
-    case = random.randint(1, 4)
-    if case == 1 or case == 2:
-        return f'{random_number_p1} {random_number_p2},{random_number_p3}'
-    if case == 3:
         return f'({random.randint(1, 11)}а)'
-    if case == 4:
+
+    if case == 5:
         return f'({random.randint(1, 11)}в)'
+
+    if case == 6:
+        return f'({random.randint(1, 11)}б)'
+
+
+def numbers_with_special_chars_v2() -> str:
+    case = random.randint(1, 2)
+
+    if case == 1:
+        generated_random_nums: list = [str(random.randint(0, 9)) for i in range(0, random.randint(3, 7))]
+        num_formatted: str = f'№ {''.join(generated_random_nums)}'
+        return num_formatted
+
+    if case == 2:
+        generated_random_nums: list = [str(random.randint(1, 9)) for i in range(0, 2)]
+        num_formatted: str = f'{''.join(generated_random_nums)}%'
+        return num_formatted
+
+
+def single_duo_chars() -> str:
+    case = random.randint(1, 4)
+    ru_alphabet: str = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'
+
+    if case == 1:
+        return '№'
+
+    if case  == 2:
+        random_num: str = str(random.randint(10, 99))
+        return random_num
+
+    if case == 3:
+        internal_case: int = random.randint(1, 3)
+
+        if internal_case == 1:
+            marks: str = ' « » '
+            return marks
+
+        if internal_case == 2:
+            return  '«'
+
+        if internal_case == 3:
+            return '»'
+
+    if case == 4:
+        internal_case: int = random.randint(1, 2)
+
+        random_index_1: int = random.randint(0, len(ru_alphabet)-1)
+        random_index_2: int = random.randint(0, len(ru_alphabet) - 1)
+
+        if internal_case == 1:
+            return f'{ru_alphabet[random_index_1]}{ru_alphabet[random_index_2]}'
+
+        if internal_case == 2:
+            return f'{ru_alphabet[random_index_1]}.'
 
 
 # Функция преобразования рандомных ру-слов (словосочетаний) в png файлы (с наличием содержаний этих слов/словосочетаний)
-def text_to_image(text: str, output_filename: str, font_size: int = 40, mode: str = 'b') -> None:
-    based_path = f'pdf_appRecognizer/extract_assets/image_files/generated_assets/numbers_with_special_chars/{output_filename}'
+def text_to_image(text: str, output_filename: str, mode: str = 'b', is_dirty: bool = False) -> None:
+    based_path: str = f'pdf_appRecognizer/extract_assets/image_files/generated_assets/words_with_special_chars/valid/images/{output_filename}'
 
-    max_height = 64
-    max_width = int(font_size * len(text) * 0.6)
+    font_list: list[str] = ["arial.ttf", "arialbd.ttf", "ARIALNB.TTF", "ARIALN.TTF", "ariblk.ttf", "calibri.ttf",
+                            "calibriz.ttf", "calibril.ttf", "cour.ttf", "courbd.ttf", "times.ttf", "timesbd.ttf",
+                            "verdana.ttf", "verdanab.ttf"]
+
+    font_size: int = random.randint(20, 40)
+    max_height: int = 64
+    max_width: int = int(font_size * len(text) * 1.1)
 
     image = Image.new('RGB', (max_width, max_height), 'white')
     draw = ImageDraw.Draw(image)
 
     try:
-        font = ImageFont.truetype("arial.ttf", font_size)
+        random_font_index: int = random.randint(0, len(font_list)-1)
+        font = ImageFont.truetype(font_list[random_font_index], font_size)
     except IOError:
         font = ImageFont.load_default()
 
@@ -131,18 +187,22 @@ def text_to_image(text: str, output_filename: str, font_size: int = 40, mode: st
     draw.text(text_position, text, fill='black', font=font)
 
     img_array = np.array(image)
-    augmented_image = dirty_image(img_array, mode)
 
-    blur_img = cv2.GaussianBlur(augmented_image, (5, 5), 0)
-    final_image = Image.fromarray(blur_img)
+    if is_dirty:
+        augmented_image = dirty_image(img_array, mode)
+        blur_img = cv2.GaussianBlur(augmented_image, (5, 5), 0)
 
-    final_image.save(based_path)
+        dirty_img = Image.fromarray(blur_img)
+        dirty_img.save(based_path)
+    else:
+        final_image = Image.fromarray(img_array)
+        final_image.save(based_path)
 
 
 # Генератор датасета
-def run_dataset_generator(dataset_path: str, filename: str, dataset_count: int, is_csv: bool = False,
-                          is_json: bool = False,):
-    # word_list: list = ru_words_lst()
+def run_dataset_generator(dataset_path: str, filename: str, dataset_count: int, data_img_name: str, src: str,
+                          is_csv: bool = False, is_json: bool = False):
+    word_list: list = ru_words_lst(src=src)
 
     if is_csv:
         with open(file=f'{dataset_path}/{filename}', mode='a', newline='') as csv_file:
@@ -150,27 +210,31 @@ def run_dataset_generator(dataset_path: str, filename: str, dataset_count: int, 
             writer.writerow(['filename', 'words'])
 
             for i in range(0, dataset_count):
-                curr_text = numbers_with_special_chars()
-                text_to_image(text=curr_text, output_filename=f'{i}.png')
+                curr_text: str = numbers_with_special_chars_v2()
+                cur_img_name: str = f'{i}_{data_img_name}.jpg'
+
+                text_to_image(text=curr_text, output_filename=cur_img_name, is_dirty=True)
 
                 writer = csv.writer(csv_file)
-                writer.writerow([f'{i}_nums_special_chars.png', curr_text])
+                writer.writerow([cur_img_name, curr_text])
 
     if is_json:
         label_dict: dict = {}
 
         for i in range(0, dataset_count):
-            curr_text: str = numbers_with_special_chars()
-            cur_img_name: str = f'{i}_nums_special_chars.png'
+            curr_text: str = generate_words_symbols_with_special_chars(word_list=word_list)
+            cur_img_name: str = f'{i}_{data_img_name}.jpg'
 
             text_to_image(text=curr_text, output_filename=cur_img_name)
-            label_dict[cur_img_name] = curr_text.replace(' ', '')
+            # label_dict[cur_img_name] = curr_text.replace(' ', '')
+            label_dict[cur_img_name] = curr_text
 
         with open(file=f'{dataset_path}/{filename}', mode='w', encoding='utf-8') as file:
             json.dump(obj=label_dict, fp=file, ensure_ascii=False, indent=3)
 
 
 # Вызов функции генератора датасета
-run_dataset_generator(dataset_path='pdf_appRecognizer/extract_assets/image_files/generated_assets/numbers_with_special_chars',
-                      filename='label.json', dataset_count=18000, is_json=True)
+run_dataset_generator(dataset_path='pdf_appRecognizer/extract_assets/image_files/generated_assets/words_with_special_chars/valid/images',
+                      filename='labels.json', dataset_count=2000, data_img_name='words_with_char', src='russian.txt',
+                      is_json=True)
 
