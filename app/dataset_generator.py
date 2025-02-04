@@ -157,9 +157,87 @@ def single_duo_chars() -> str:
             return f'{ru_alphabet[random_index_1]}.'
 
 
+def generate_extended_data(word_list: list) -> str:
+    ru_alphabet: str = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'
+    case: int = random.randint(1, 3)
+
+    if case == 1:
+        internal_case: int = random.randint(1, 3)
+
+        if internal_case == 1:
+            generated_ones_zeros_p1: list = [str(random.randint(0, 1)) for i in range(0, 2)]
+            generated_ones_zeros_p2: list = [str(random.randint(0, 1)) for i in range(0, 2)]
+            generated_ones_zeros_p3: list = [str(random.randint(0, 1)) for i in range(0, 2)]
+
+            num_formatted: str = (f'№ 1{generated_ones_zeros_p1[0]}{generated_ones_zeros_p1[1]}1/1{generated_ones_zeros_p2[0]}{generated_ones_zeros_p2[1]}1/'
+                                  f'1{generated_ones_zeros_p3[0]}{generated_ones_zeros_p3[1]}1')
+            return num_formatted
+
+        if internal_case == 2:
+            generated_random_num_1: str = str(random.randint(1, 9))
+            generated_random_num_2: str = str(random.randint(1, 9))
+
+            return f'{generated_random_num_1}/{generated_random_num_2}'
+
+        if internal_case == 3:
+            random_index_1: int = random.randint(0, len(ru_alphabet) - 1)
+            random_index_2: int = random.randint(0, len(ru_alphabet) - 1)
+
+            return f'{ru_alphabet[random_index_1]}/{ru_alphabet[random_index_2]}'
+
+    if case == 2:
+        internal_case: int = random.randint(1, 3)
+
+        if internal_case == 1:
+            random_index_1: int = random.randint(0, len(ru_alphabet) - 1)
+            random_index_2: int = random.randint(0, len(ru_alphabet) - 1)
+
+            return f'{ru_alphabet[random_index_1].upper()}.{ru_alphabet[random_index_2].upper()}.'
+
+        if internal_case == 2:
+            extra_internal_case: int = random.randint(1, 2)
+            random_index: int = random.randint(0, len(ru_alphabet) - 1)
+
+            if extra_internal_case == 1:
+                return f'{ru_alphabet[random_index]},'
+
+            if extra_internal_case == 2:
+                return f'{ru_alphabet[random_index]}.'
+
+        if internal_case == 3:
+            random_index_1: int = random.randint(0, len(ru_alphabet) - 1)
+            random_index_2: int = random.randint(0, len(ru_alphabet) - 1)
+
+            random_index_3: int = random.randint(0, len(ru_alphabet) - 1)
+            random_index_4: int = random.randint(0, len(ru_alphabet) - 1)
+            # Формат по типу "ИНН/КПП"
+            return (f'{ru_alphabet[random_index_1].upper()}{ru_alphabet[random_index_2].upper()}/'
+                    f'{ru_alphabet[random_index_3].upper()}{ru_alphabet[random_index_4].upper()}')
+
+    if case == 3:
+        internal_case: int = random.randint(1, 3)
+
+        if internal_case == 1:
+            selected_word: list = random.sample(word_list, 1)
+            return f'({selected_word[0]})'
+
+        if internal_case == 2:
+            generated_random_num: str = str(random.randint(0, 9))
+            return f'({generated_random_num})'
+
+        if internal_case == 3:
+            random_index_1: int = random.randint(0, len(ru_alphabet) - 1)
+            random_index_2: int = random.randint(0, len(ru_alphabet) - 1)
+            random_index_3: int = random.randint(0, len(ru_alphabet) - 1)
+
+            return f'({ru_alphabet[random_index_1]}.{ru_alphabet[random_index_2]}.{ru_alphabet[random_index_3]}.)'
+
+
+
+
 # Функция преобразования рандомных ру-слов (словосочетаний) в png файлы (с наличием содержаний этих слов/словосочетаний)
 def text_to_image(text: str, output_filename: str, mode: str = 'b', is_dirty: bool = False) -> None:
-    based_path: str = f'pdf_appRecognizer/extract_assets/image_files/generated_assets/words_with_special_chars/valid/images/{output_filename}'
+    based_path: str = f'pdf_appRecognizer/extract_assets/image_files/generated_assets/extended_data/valid/images/{output_filename}'
 
     font_list: list[str] = ["arial.ttf", "arialbd.ttf", "ARIALNB.TTF", "ARIALN.TTF", "ariblk.ttf", "calibri.ttf",
                             "calibriz.ttf", "calibril.ttf", "cour.ttf", "courbd.ttf", "times.ttf", "timesbd.ttf",
@@ -222,7 +300,7 @@ def run_dataset_generator(dataset_path: str, filename: str, dataset_count: int, 
         label_dict: dict = {}
 
         for i in range(0, dataset_count):
-            curr_text: str = generate_words_symbols_with_special_chars(word_list=word_list)
+            curr_text: str = generate_extended_data(word_list=word_list)
             cur_img_name: str = f'{i}_{data_img_name}.jpg'
 
             text_to_image(text=curr_text, output_filename=cur_img_name)
@@ -234,7 +312,7 @@ def run_dataset_generator(dataset_path: str, filename: str, dataset_count: int, 
 
 
 # Вызов функции генератора датасета
-run_dataset_generator(dataset_path='pdf_appRecognizer/extract_assets/image_files/generated_assets/words_with_special_chars/valid/images',
-                      filename='labels.json', dataset_count=2000, data_img_name='words_with_char', src='russian.txt',
+run_dataset_generator(dataset_path='pdf_appRecognizer/extract_assets/image_files/generated_assets/extended_data/valid/images',
+                      filename='labels.json', dataset_count=4000, data_img_name='extended_data', src='russian.txt',
                       is_json=True)
 
