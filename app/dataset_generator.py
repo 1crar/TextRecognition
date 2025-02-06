@@ -233,6 +233,33 @@ def generate_extended_data(word_list: list) -> str:
             return f'({ru_alphabet[random_index_1]}.{ru_alphabet[random_index_2]}.{ru_alphabet[random_index_3]}.)'
 
 
+def generate_extended_data_v2(word_list: list) -> str:
+    case: int = random.randint(1, 3)
+
+    if case == 1:
+        random_digit: str = str(random.randint(10, 20))
+        return f'{random_digit}%'
+
+    if case == 2:
+        internal_case: int = random.randint(1, 2)
+        selected_words: list = random.sample(word_list, 2)
+
+        if internal_case == 1:
+            return f'{selected_words[0]}-{selected_words[1]}'
+
+        if internal_case == 2:
+            return f'{selected_words[0].capitalize()}-{selected_words[1].capitalize()}'
+
+    if case == 3:
+        internal_case: int = random.randint(1, 2)
+        selected_words: list = random.sample(word_list, 2)
+
+        if internal_case == 1:
+            return f'ООО «{selected_words[0]} {selected_words[1]}»'
+
+        if internal_case == 2:
+            return f'ООО «{selected_words[0].capitalize()} {selected_words[1].capitalize()}»'
+
 
 
 # Функция преобразования рандомных ру-слов (словосочетаний) в png файлы (с наличием содержаний этих слов/словосочетаний)
@@ -300,7 +327,7 @@ def run_dataset_generator(dataset_path: str, filename: str, dataset_count: int, 
         label_dict: dict = {}
 
         for i in range(0, dataset_count):
-            curr_text: str = generate_extended_data(word_list=word_list)
+            curr_text: str = generate_extended_data_v2(word_list=word_list)
             cur_img_name: str = f'{i}_{data_img_name}.jpg'
 
             text_to_image(text=curr_text, output_filename=cur_img_name)
@@ -313,6 +340,6 @@ def run_dataset_generator(dataset_path: str, filename: str, dataset_count: int, 
 
 # Вызов функции генератора датасета
 run_dataset_generator(dataset_path='pdf_appRecognizer/extract_assets/image_files/generated_assets/extended_data/valid/images',
-                      filename='labels.json', dataset_count=4000, data_img_name='extended_data', src='russian.txt',
+                      filename='labels.json', dataset_count=4000, data_img_name='extended_data_v2', src='russian.txt',
                       is_json=True)
 
