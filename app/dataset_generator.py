@@ -234,7 +234,7 @@ def generate_extended_data(word_list: list) -> str:
 
 
 def generate_extended_data_v2(word_list: list) -> str:
-    case: int = random.randint(1, 3)
+    case: int = random.randint(3, 4)
 
     if case == 1:
         random_digit: str = str(random.randint(10, 20))
@@ -251,7 +251,7 @@ def generate_extended_data_v2(word_list: list) -> str:
             return f'{selected_words[0].capitalize()}-{selected_words[1].capitalize()}'
 
     if case == 3:
-        internal_case: int = random.randint(1, 2)
+        internal_case: int = random.randint(1, 6)
         selected_words: list = random.sample(word_list, 2)
 
         if internal_case == 1:
@@ -259,6 +259,24 @@ def generate_extended_data_v2(word_list: list) -> str:
 
         if internal_case == 2:
             return f'ООО «{selected_words[0].capitalize()} {selected_words[1].capitalize()}»'
+
+        if internal_case == 3:
+            return f'ООО "{selected_words[0].capitalize()} {selected_words[1].capitalize()}"'
+
+        if internal_case == 4:
+            return f'ООО "{selected_words[0]} {selected_words[1]}"'
+
+        if internal_case == 5:
+            return f'ООО \'{selected_words[0].capitalize()} {selected_words[1].capitalize()}\''
+
+        if internal_case == 6:
+            return f'ООО \'{selected_words[0]} {selected_words[1]}\''
+
+    if case == 4:
+        numbers_before_slash = ''.join(str(random.randint(0, 9)) for _ in range(10))
+        numbers_after_slash = ''.join(str(random.randint(0, 9)) for _ in range(9))
+
+        return f'{numbers_before_slash}/{numbers_after_slash}'
 
 
 
@@ -340,6 +358,6 @@ def run_dataset_generator(dataset_path: str, filename: str, dataset_count: int, 
 
 # Вызов функции генератора датасета
 run_dataset_generator(dataset_path='pdf_appRecognizer/extract_assets/image_files/generated_assets/extended_data/valid/images',
-                      filename='labels.json', dataset_count=4000, data_img_name='extended_data_v2', src='russian.txt',
+                      filename='extended_valid_v3_labels.json', dataset_count=6000, data_img_name='extended_data_v3', src='russian.txt',
                       is_json=True)
 
