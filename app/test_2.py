@@ -189,8 +189,7 @@ def main_test_3_cell_extracter():
     print(f'INFO: Кол-во файлов\t{counter_file}')
 
 
-main_test_3_cell_extracter()
-
+# main_test_3_cell_extracter()
 
 # cur_folder_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/test_2/dt_cropped'
 # cur_img_file: str = 'YPD_2_cropped.png'
