@@ -38,6 +38,12 @@ description_of_test_cases.txt
 
 # temp png files for se results of data detection by TesseractOCR
 app/temp
+app/extended_labels.json
+app/labels.json
 
 10000-russian-words.txt
+prepositions-ru.txt
 russian.txt
+app/trained_models/docTR
+
+
