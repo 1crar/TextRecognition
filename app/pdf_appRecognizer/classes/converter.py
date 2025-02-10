@@ -1,3 +1,4 @@
+import json
 import os
 
 from dotenv import load_dotenv
@@ -38,3 +39,18 @@ class Converter:
         pdf_file.save(fp=to_save, quality=100)
 
 
+def from_txt_to_json(input_txt_path: str, output_json_path: str) -> None:
+    with open(file=input_txt_path, mode='r', encoding='utf-8') as txt_file:
+        lines: list = [line.rstrip() for line in txt_file]
+        cur_dict: dict = {}
+
+        for line in lines:
+            key, value = line.split("`")
+            cur_dict[key[2:]] = value       # Игнорируем первые два индекса ключа
+
+    with open(output_json_path, 'w', encoding='utf-8') as f:
+        json.dump(cur_dict, f, ensure_ascii=False, indent=3)
+
+
+from_txt_to_json(input_txt_path=r'C:\Users\serge\Рабочий стол\all_labels\6.txt',
+                 output_json_path=r'C:\Users\serge\Рабочий стол\all_labels\6.json')

@@ -1,3 +1,6 @@
+import os
+import shutil
+import json
 import cv2
 
 from dotenv import load_dotenv
@@ -16,7 +19,7 @@ def remove_column_names(extracted_data: list) -> list:
     is_flag = False
 
     for cur_text in extracted_data:
-        if cur_text == 'A':
+        if cur_text == 'A' or cur_text == 'А':
             is_flag = True
 
         if is_flag:
@@ -73,6 +76,7 @@ def main_test_2(folder_path: str, img_filename: str, test_case: int, is_complex_
     for i in range(len(results)):
         if i not in used_indices:
             current_indices = set([i])
+
             find_intersecting_bboxes(i, results, current_indices)
             used_indices.update(current_indices)
             # Добавляем все найденные bbox в filtered_results
@@ -83,6 +87,7 @@ def main_test_2(folder_path: str, img_filename: str, test_case: int, is_complex_
         for i in range(len(results)):
             if i not in used_indices:
                 current_indices = set([i])
+
                 find_intersecting_bboxes(i, results, current_indices)
                 used_indices.update(current_indices)
                 # Добавляем все найденные bbox в filtered_results
@@ -126,8 +131,68 @@ def main_test_2(folder_path: str, img_filename: str, test_case: int, is_complex_
     image_pil.show()
 
 
-cur_folder_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/test_2/dt_cropped'
-cur_img_file: str = 'YPD_1_without_lines_dt.png'
-# Запуск функции извлечения данных из обрезанной таблицы из УПД (с границами/без границ ячеек)
-main_test_2(folder_path=cur_folder_path, img_filename=cur_img_file, test_case=1, is_complex_row=True)
+def main_test_3_cell_extracter():
+    cropped_path: str = ('pdf_appRecognizer/extract_assets/image_files/YPDs/test_1/dt_cropped/cropped_cells/'
+                         'cells_99_cropped')
+    detected_files_path = os.path.join(cropped_path, 'detected_files')
+    # Создание папки 'detected_files', если она не существует
+    os.makedirs(detected_files_path, exist_ok=True)
+
+    previous_file_name = None  # Переменная для хранения имени предыдущего файла
+    list_text: list = []     # Список для хранения текста
+
+    counter_file: int = 0
+    labels: dict = {}       # Словарь для записи лейблов в JSON
+
+    for cropped_cell_file in os.listdir(path=cropped_path):
+
+        cur_full_path = os.path.join(cropped_path, cropped_cell_file)
+
+        if os.path.isfile(cur_full_path):
+            cell_cv2 = cv2.imread(filename=cur_full_path)
+            languages: list = ['ru']
+
+            reader = easyocr.Reader(lang_list=languages, gpu=True)
+            results = reader.readtext(cell_cv2)
+
+            for (_, text, _) in results:
+                # print(f'INFO:  извлеченный текст:\t{text}   из файла:\t{cropped_cell_file}')
+                # counter_file += 1
+
+                # Сравнение с именем предыдущего файла
+                if previous_file_name is not None:
+                    if cropped_cell_file == previous_file_name:
+                        list_text.append(text)
+                    else:
+                        list_text.append(text)
+                        union_text = ' '.join(list_text)
+
+                        print(f'INFO: Извлеченный текст:\t{union_text}  из файла:\t{cropped_cell_file}')
+                        # print(f'INFO: Имена файлов различаются: {cropped_cell_file} и {previous_file_name}.')
+                        list_text = []
+                        labels[cropped_cell_file] = union_text
+
+                        shutil.copy(cur_full_path, detected_files_path)
+                        counter_file += 1
+                else:
+                    print(f'INFO: Извлеченный текст:\t{text}  из файла:\t{cropped_cell_file}')
+                    labels[cropped_cell_file] = text
+
+                    shutil.copy(cur_full_path, detected_files_path)
+                    counter_file += 1
+
+                previous_file_name = cropped_cell_file  # Обновление имени предыдущего файла
+
+    with open(file=f'{detected_files_path}/labels.json', mode='w', encoding='utf-8') as file:
+        json.dump(obj=labels, fp=file, ensure_ascii=False, indent=3)
+
+    print(f'INFO: Кол-во файлов\t{counter_file}')
+
+
+# main_test_3_cell_extracter()
+
+# cur_folder_path: str = 'pdf_appRecognizer/extract_assets/image_files/YPDs/test_2/dt_cropped'
+# cur_img_file: str = 'YPD_2_cropped.png'
+# # Запуск функции извлечения данных из обрезанной таблицы из УПД (с границами/без границ ячеек)
+# main_test_2(folder_path=cur_folder_path, img_filename=cur_img_file, test_case=1, is_complex_row=True)
 

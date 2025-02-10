@@ -1,13 +1,11 @@
 from typing import Any, Sequence
 
-import copy
 import cv2
 import easyocr
 import os
 import pytesseract
 import time
 import torch
-import subprocess
 
 import numpy as np
 import pandas as pd
@@ -762,6 +760,65 @@ def test_processing():
 
 
 # test_processing()
+
+
+path_to_cropped_dt_img: str = '../extract_assets/image_files/YPDs/test_1/dt_cropped/cropped_dt_parts'
+
+
+def each_cell_cropper(cur_ocr, path_folder: str, cropped_file_name: str):
+    """
+    Используется исключительно для обрезанных изображений
+    :return:
+    """
+    full_dt_img_path: str = f'{path_folder}/{cropped_file_name}'
+
+    ocr = cur_ocr
+    doc_dt = ImageDoc(src=full_dt_img_path)
+    extracted_tables = doc_dt.extract_tables(ocr=ocr)
+
+    table_img = cv2.imread(full_dt_img_path)
+
+    # Создаем директорию для сохранения обрезанных ячеек
+    cropped_cells_folder = f'{path_folder.replace('/cropped_dt_parts', '')}/cropped_cells'
+    os.makedirs(cropped_cells_folder, exist_ok=True)
+
+    for table in extracted_tables:
+        for idx, row in enumerate(table.content.values()):
+            for jdx, cell in enumerate(row):
+                # Рисуем прямоугольник
+                cv2.rectangle(table_img, (cell.bbox.x1, cell.bbox.y1), (cell.bbox.x2, cell.bbox.y2), (255, 0, 0), 2)
+
+                # Обрезаем ячейку
+                cropped_cell = table_img[cell.bbox.y1:cell.bbox.y2, cell.bbox.x1:cell.bbox.x2]
+
+                # Сохраняем обрезанную ячейку с уникальным именем
+                cropped_cell_file_name = f'cell_{idx}_{jdx}_{cropped_file_name}'
+                new_path: str = f'{cropped_cells_folder}/cells_{cropped_file_name[:-4]}'
+
+                if not os.path.exists(new_path):
+                    os.makedirs(new_path)
+
+                try:
+                    cv2.imwrite(f'{new_path}/{cropped_cell_file_name}', cropped_cell)
+                except cv2.error as e:
+                    print(f'Ошибка во время записи {e}')
+
+    rectangled_file_name: str = f'rectangled_{cropped_file_name}'
+    Img.fromarray(table_img).save(f'{path_folder.replace('/cropped_dt_parts', '')}'
+                                  f'/rectangled_dt_cropped/{rectangled_file_name}')
+
+
+def test_cell_cropper():
+    for filename in os.listdir(path=path_to_cropped_dt_img):
+        # переменная cur_file_path нужна для проверки является ли текущий объект файлом
+        cur_file_path = os.path.join(path_to_cropped_dt_img, filename)
+
+        if os.path.isfile(cur_file_path):
+            each_cell_cropper(cur_ocr=EasyOCR(lang=['ru'], kw={"gpu": True}), path_folder=path_to_cropped_dt_img,
+                              cropped_file_name=filename)
+
+
+# test_cell_cropper()
 
 
 def test_trash_processing_and_cropping():
